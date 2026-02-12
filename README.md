@@ -1,52 +1,71 @@
-# PULSE
-Avec Enzo on veux faire une application web dans le même style que Spotify, un lecteur audio
-RAPPORT DE PROJET - PULSE
-1. PROJET
-Nom : PULSE - Lecteur audio web
-Objectif : Créer un lecteur audio fonctionnel pour ordinateur avec upload, gestion de bibliothèque et lecture de fichiers MP3.
-Équipe : Aubert Enzo & Lavorata Swann - TG4 / TG3
+# 🚀 PULSE - Lecteur Audio Web
 
-2. TECHNOLOGIES
-Frontend : Python, HTML, CSS, JavaScript
+## 📝 Description
 
-API : HTML, Audio API, File API, LocalStorage
+**PULSE** est une application web de lecteur audio développée dans le cadre des Trophées NSI. L'objectif est de créer un lecteur musical fonctionnel dans l'esprit de Spotify, mais en version application bureau, avec une identité visuelle futuriste violet/noir.
 
-Outils : VS Code, GitHub, Chrome DevTools
+**Pourquoi ce projet ?**  
+Nous sommes tous les deux passionnés de musique et de développement. Nous voulions créer un outil élégant et fonctionnel qui permette d'écouter sa musique locale sans publicité, sans tracking, et avec une expérience utilisateur soignée.
 
-3. FONCTIONNALITÉS IMPLÉMENTÉES
-Base :
-✅ Upload fichiers audio (MP3/WAV)
+**Originalité :**  
+- Interface **application bureau** (pas un simple site web)
+- Design **futuriste violet/noir** avec effets de glow
+- Glisser-déposer de fichiers
+- Raccourcis clavier (espace = play/pause)
+- Sauvegarde automatique des playlists
 
-✅ Bibliothèque avec liste des morceaux
+---
 
-✅ Lecteur (play/pause, volume, progression)
+## 👥 L'Équipe
 
-✅ Glisser-déposer de fichiers
+- **Lavorata Swann** (@Swann.lvt) : **Responsable Interface & Design**  
+  Conception HTML/CSS, design application bureau, responsive PC, tests d'ergonomie
 
-Avancé :
-✅ Contrôles clavier (Espace = play/pause)
+- **Aubert Enzo** (@Enzoxx07) : **Responsable Logique & Fonctionnalités**  
+  JavaScript et API audio, gestion upload/lecture, contrôles clavier/souris, sauvegarde LocalStorage
 
-✅ Menu contextuel (clic droit)
+*Classe : TG4 / TG3*
 
-✅ Sauvegarde automatique
+---
 
-✅ Design application bureau
+## 🛠️ Aspects Techniques (Spécificités NSI)
 
-4. RÉPARTITION DES TÂCHES
-Swann - Interface & Design :
-- Conception HTML/CSS
+Cette section détaille les concepts du programme de NSI mobilisés dans PULSE :
 
-- Design application bureau
+### 🐍 **Python / Flask**
+- **Backend complet** en Python avec le micro-framework Flask
+- **Gestion des fichiers audio** : analyse des métadonnées ID3 (MP3)
+- **API REST** : endpoints pour la bibliothèque et la lecture
+- **Programmation Orientée Objet** : classe `AudioLibrary` pour gérer la collection
 
-- Responsive pour PC
+### 🌐 **Frontend (HTML/CSS/JS)**
+- **Manipulation du DOM** : affichage dynamique de la bibliothèque
+- **Événements** : gestion des clics, du glisser-déposer, des raccourcis clavier
+- **Web Audio API** : contrôle précis de la lecture
+- **LocalStorage** : sauvegarde persistante des playlists
 
--  Tests d'ergonomie
+### 📊 **Structures de données utilisées**
+- **Dictionnaires** : métadonnées des morceaux (titre, artiste, durée, chemin)
+- **Listes** : playlist en cours, bibliothèque de morceaux
+- **Objets JSON** : sérialisation pour la sauvegarde locale
 
-Enzo - Logique & Fonctionnalités : 
-- JavaScript et API audio
+### 🔧 **Algorithmes et concepts**
+- **Parcours de fichiers** : scan récursif du dossier audio
+- **Filtrage** : recherche par titre/artiste
+- **Gestion d'état** : lecteur (play/pause/volume/progression)
+- **Programmation événementielle** : réactivité de l'interface
 
-- Gestion upload/lecture
+---
 
-- Contrôles clavier/souris
+## 🚀 Installation et Utilisation
 
-- Sauvegarde LocalStorage
+### Prérequis
+- Python 3.8 ou supérieur
+- Navigateur moderne (Chrome, Edge, Firefox)
+
+### Installation
+
+1. **Cloner le dépôt**
+```bash
+git clone https://github.com/votre-repo/pulse.git
+cd pulse
