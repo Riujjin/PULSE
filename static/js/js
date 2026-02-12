@@ -1,0 +1,19 @@
+// Charger les chansons au démarrage
+fetch('/api/songs')
+    .then(response => response.json())
+    .then(songs => {
+        const list = document.getElementById('songs-list');
+        list.innerHTML = songs.map(song => `
+            <div onclick="playSong('${song.path}')">
+                🎵 ${song.title} - ${song.artist}
+            </div>
+        `).join('');
+    });
+
+// Fonction pour jouer une chanson
+function playSong(path) {
+    const audio = document.getElementById('audio');
+    audio.src = `/api/play/${encodeURIComponent(path)}`;
+    audio.play();
+    document.getElementById('current-song').textContent = `Lecture: ${path.split('\\').pop()}`;
+}

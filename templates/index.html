@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PULSE - Lecteur Audio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app">
+        <h1>🎵 PULSE</h1>
+        
+        <div id="songs-list">
+            <!-- Les chansons apparaîtront ici -->
+        </div>
+
+        <div class="player">
+            <audio id="audio" controls>
+                Votre navigateur ne supporte pas l'audio.
+            </audio>
+            <div id="current-song">Aucune chanson sélectionnée</div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/player.js') }}"></script>
+</body>
+</html>
