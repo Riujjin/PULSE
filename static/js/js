@@ -1,19 +1,294 @@
-// Charger les chansons au démarrage
-fetch('/api/songs')
-    .then(response => response.json())
-    .then(songs => {
-        const list = document.getElementById('songs-list');
-        list.innerHTML = songs.map(song => `
-            <div onclick="playSong('${song.path}')">
-                🎵 ${song.title} - ${song.artist}
+class AudioPlayer {
+    constructor() {
+        this.audio = document.getElementById('audio-element');
+        this.playlist = [];
+        this.currentIndex = 0;
+        this.isPlaying = false;
+        this.playlists = JSON.parse(localStorage.getItem('pulse_playlists')) || {};
+        
+        console.log('🎵 Initialisation du lecteur...');
+        this.initEventListeners();
+        this.loadSongs();
+        this.displayPlaylists();
+    }
+    
+    initEventListeners() {
+        // Boutons du lecteur
+        document.getElementById('play-btn')?.addEventListener('click', () => this.play());
+        document.getElementById('pause-btn')?.addEventListener('click', () => this.pause());
+        document.getElementById('prev-btn')?.addEventListener('click', () => this.previous());
+        document.getElementById('next-btn')?.addEventListener('click', () => this.next());
+        
+        // Barre de progression
+        const progress = document.getElementById('progress');
+        this.audio.ontimeupdate = () => {
+            if (this.audio.duration) {
+                progress.value = (this.audio.currentTime / this.audio.duration) * 100;
+                this.updateTimeDisplay();
+            }
+        };
+        
+        progress.addEventListener('input', (e) => {
+            const time = (e.target.value / 100) * this.audio.duration;
+            this.audio.currentTime = time;
+        });
+        
+        // Volume
+        const volume = document.getElementById('volume');
+        volume.addEventListener('input', (e) => {
+            this.audio.volume = e.target.value;
+        });
+        
+        // Navigation par onglets
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.switchView(btn.dataset.view));
+        });
+        
+        // Upload de fichiers
+        document.getElementById('upload-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.uploadFile();
+        });
+        
+        // Recherche en temps réel
+        document.getElementById('search-input')?.addEventListener('input', (e) => {
+            this.searchSongs(e.target.value);
+        });
+        
+        // Filtres de la bibliothèque
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // Logique de filtrage à implémenter
+            });
+        });
+        
+        // Fin de la chanson
+        this.audio.onended = () => this.next();
+        
+        // Raccourcis clavier
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                this.isPlaying ? this.pause() : this.play();
+            } else if (e.code === 'ArrowLeft') {
+                this.previous();
+            } else if (e.code === 'ArrowRight') {
+                this.next();
+            }
+        });
+    }
+    
+    async loadSongs() {
+        try {
+            const response = await fetch('/api/songs');
+            const songs = await response.json();
+            this.playlist = songs;
+            this.displaySongs(songs);
+        } catch (error) {
+            console.error('❌ Erreur chargement:', error);
+        }
+    }
+    
+    displaySongs(songs) {
+        const container = document.getElementById('songs-list');
+        if (!container) return;
+        
+        if (songs.length === 0) {
+            container.innerHTML = '<div class="no-songs">📁 Aucune musique trouvée. Utilise le bouton "Importer" pour ajouter des fichiers.</div>';
+            return;
+        }
+        
+        container.innerHTML = songs.map(song => `
+            <div class="song-card" onclick="player.playSong('${song.id.replace(/\\/g, '/')}')">
+                <h3>${song.title}</h3>
+                <p>${song.artist}</p>
+                <span class="duration">${this.formatTime(song.duration)}</span>
             </div>
         `).join('');
-    });
-
-// Fonction pour jouer une chanson
-function playSong(path) {
-    const audio = document.getElementById('audio');
-    audio.src = `/api/play/${encodeURIComponent(path)}`;
-    audio.play();
-    document.getElementById('current-song').textContent = `Lecture: ${path.split('\\').pop()}`;
+        
+        // Mettre à jour les autres sections
+        const recent = document.getElementById('recent-songs');
+        if (recent) recent.innerHTML = container.innerHTML;
+        
+        const allSongs = document.getElementById('all-songs-for-playlist');
+        if (allSongs) allSongs.innerHTML = container.innerHTML;
+    }
+    
+    playSong(songPath) {
+        const song = this.playlist.find(s => s.id === songPath);
+        if (song) {
+            this.currentIndex = this.playlist.indexOf(song);
+            this.audio.src = `/api/play/${encodeURIComponent(songPath.replace(/\\/g, '/'))}`;
+            this.play();
+            
+            document.getElementById('current-song').textContent = song.title;
+            document.getElementById('current-artist').textContent = song.artist;
+        }
+    }
+    
+    play() {
+        this.audio.play();
+        document.getElementById('play-btn').style.display = 'none';
+        document.getElementById('pause-btn').style.display = 'flex';
+        this.isPlaying = true;
+    }
+    
+    pause() {
+        this.audio.pause();
+        document.getElementById('play-btn').style.display = 'flex';
+        document.getElementById('pause-btn').style.display = 'none';
+        this.isPlaying = false;
+    }
+    
+    previous() {
+        if (this.currentIndex > 0) {
+            this.currentIndex--;
+            this.playSong(this.playlist[this.currentIndex].id);
+        }
+    }
+    
+    next() {
+        if (this.currentIndex < this.playlist.length - 1) {
+            this.currentIndex++;
+            this.playSong(this.playlist[this.currentIndex].id);
+        }
+    }
+    
+    async uploadFile() {
+        const fileInput = document.getElementById('audio-file');
+        if (!fileInput.files.length) {
+            alert('❌ Sélectionne au moins un fichier audio');
+            return;
+        }
+        
+        const formData = new FormData();
+        for (let file of fileInput.files) {
+            formData.append('file', file);
+        }
+        
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                alert('✅ Fichiers importés avec succès !');
+                this.loadSongs();
+                fileInput.value = '';
+            } else {
+                alert('❌ Erreur lors de l\'import');
+            }
+        } catch (error) {
+            console.error('Erreur upload:', error);
+            alert('❌ Erreur de connexion');
+        }
+    }
+    
+    searchSongs(query) {
+        if (!query) {
+            this.displaySongs(this.playlist);
+            return;
+        }
+        
+        const results = this.playlist.filter(song => 
+            song.title.toLowerCase().includes(query.toLowerCase()) ||
+            song.artist.toLowerCase().includes(query.toLowerCase())
+        );
+        
+        const resultsContainer = document.getElementById('search-results');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = results.map(song => `
+                <div class="song-card" onclick="player.playSong('${song.id.replace(/\\/g, '/')}')">
+                    <h3>${song.title}</h3>
+                    <p>${song.artist}</p>
+                    <span class="duration">${this.formatTime(song.duration)}</span>
+                </div>
+            `).join('');
+        }
+    }
+    
+    createPlaylist() {
+        const name = document.getElementById('playlist-name')?.value;
+        if (!name) return alert('Donne un nom à ta playlist');
+        
+        const description = document.getElementById('playlist-description')?.value || '';
+        
+        this.playlists[name] = {
+            name: name,
+            description: description,
+            songs: [],
+            created: new Date().toISOString()
+        };
+        
+        localStorage.setItem('pulse_playlists', JSON.stringify(this.playlists));
+        alert(`✅ Playlist "${name}" créée !`);
+        this.displayPlaylists();
+    }
+    
+    displayPlaylists() {
+        const container = document.getElementById('playlists-list');
+        if (!container) return;
+        
+        const playlistNames = Object.keys(this.playlists);
+        if (playlistNames.length === 0) return;
+        
+        playlistNames.forEach(name => {
+            const btn = document.createElement('button');
+            btn.className = 'nav-btn';
+            btn.innerHTML = `<span class="icon">📋</span> ${name}`;
+            btn.onclick = () => this.showPlaylist(name);
+            container.appendChild(btn);
+        });
+    }
+    
+    showPlaylist(name) {
+        const playlist = this.playlists[name];
+        if (!playlist) return;
+        
+        document.getElementById('playlist-title').textContent = playlist.name;
+        document.getElementById('playlist-description-text').textContent = playlist.description;
+        document.getElementById('playlist-stats').textContent = `${playlist.songs.length} morceaux`;
+        
+        // Afficher les chansons de la playlist
+        const container = document.getElementById('playlist-songs');
+        container.innerHTML = playlist.songs.map(song => `
+            <div class="song-card" onclick="player.playSong('${song.path}')">
+                <h3>${song.title}</h3>
+                <p>${song.artist}</p>
+            </div>
+        `).join('');
+        
+        this.switchView('playlist');
+    }
+    
+    switchView(view) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(`${view}-view`)?.classList.add('active');
+        
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === view);
+        });
+    }
+    
+    formatTime(seconds) {
+        if (!seconds) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    updateTimeDisplay() {
+        const current = this.formatTime(this.audio.currentTime);
+        const total = this.formatTime(this.audio.duration);
+        document.getElementById('time-current').textContent = current;
+        document.getElementById('time-total').textContent = total;
+    }
 }
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', () => {
+    window.player = new AudioPlayer();
+});
