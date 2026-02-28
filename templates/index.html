@@ -5,12 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PULSE - Lecteur Audio</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Notifications toast */
+        .notify {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            z-index: 9999;
+            animation: fadeInOut 3s ease forwards;
+            pointer-events: none;
+        }
+        .notify-success { background: #1db954; color: #fff; }
+        .notify-error   { background: #e74c3c; color: #fff; }
+        .notify-info    { background: #3498db; color: #fff; }
+        @keyframes fadeInOut {
+            0%   { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+            80%  { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        /* Carte en cours de lecture */
+        .song-card.playing { border-left: 3px solid #1db954; }
+    </style>
 </head>
 <body>
     <div class="container">
+
         <!-- ===== SIDEBAR ===== -->
         <aside class="sidebar">
             <div class="logo">PULSE</div>
+
             <div class="nav-section">
                 <h3>MENU</h3>
                 <nav>
@@ -25,6 +54,7 @@
                     </button>
                 </nav>
             </div>
+
             <div class="nav-section">
                 <h3>PLAYLISTS</h3>
                 <div id="playlists-list">
@@ -33,18 +63,22 @@
                     </button>
                 </div>
             </div>
+
             <div class="upload-section">
                 <h3>AJOUTER</h3>
                 <form id="upload-form" enctype="multipart/form-data">
-                    <input type="file" id="audio-file" name="file" accept="audio/*" multiple>
-                    <button type="submit">Importer</button>
+                    <!-- multiple : permet de sélectionner plusieurs fichiers -->
+                    <input type="file" id="audio-file" name="file"
+                           accept=".mp3,.flac,.wav,.ogg,.m4a,.aac" multiple>
+                    <!-- id="upload-btn" nécessaire pour désactiver pendant l'upload -->
+                    <button type="submit" id="upload-btn">Importer</button>
                 </form>
             </div>
         </aside>
 
         <!-- ===== MAIN CONTENT ===== -->
         <main class="main-content">
-            <!-- Barre recherche -->
+
             <div class="search-header">
                 <div class="search-container">
                     <span class="search-icon">🔍</span>
@@ -53,7 +87,8 @@
             </div>
 
             <div class="pages-container">
-                <!-- PAGE ACCUEIL -->
+
+                <!-- ACCUEIL -->
                 <div id="home-view" class="view active">
                     <h1>Bienvenue sur PULSE</h1>
                     <p class="subtitle">L'audio du futur, aujourd'hui</p>
@@ -61,19 +96,15 @@
                         <h2>Récemment écoutés</h2>
                         <div class="songs-grid" id="recent-songs"></div>
                     </section>
-                    <section class="featured-section">
-                        <h2>Recommandations</h2>
-                        <div class="songs-grid" id="recommended-songs"></div>
-                    </section>
                 </div>
 
-                <!-- PAGE RECHERCHE -->
+                <!-- RECHERCHE -->
                 <div id="search-view" class="view">
                     <h1>Résultats de recherche</h1>
                     <div id="search-results" class="songs-grid"></div>
                 </div>
 
-                <!-- PAGE BIBLIOTHÈQUE -->
+                <!-- BIBLIOTHÈQUE -->
                 <div id="library-view" class="view">
                     <h1>Bibliothèque musicale</h1>
                     <div class="library-filters">
@@ -85,21 +116,22 @@
                     <div id="songs-list" class="songs-grid"></div>
                 </div>
 
-                <!-- PAGE CRÉATION PLAYLIST -->
+                <!-- CRÉER PLAYLIST -->
                 <div id="create-playlist-view" class="view">
                     <h1>Créer une playlist</h1>
                     <div class="playlist-creator">
                         <div class="playlist-form">
                             <input type="text" id="playlist-name" placeholder="Nom de la playlist">
                             <textarea id="playlist-description" placeholder="Description (optionnel)"></textarea>
-                            <button onclick="player.createPlaylist()">Créer playlist</button>
+                            <!-- onclick appelle player.createPlaylist() -->
+                            <button type="button" onclick="player.createPlaylist()">Créer</button>
                         </div>
                     </div>
                     <h2>Ajouter des morceaux</h2>
                     <div id="all-songs-for-playlist" class="songs-grid"></div>
                 </div>
 
-                <!-- PAGE PLAYLIST INDIVIDUELLE -->
+                <!-- PLAYLIST INDIVIDUELLE -->
                 <div id="playlist-view" class="view">
                     <div id="playlist-header">
                         <div class="playlist-cover">
@@ -109,11 +141,12 @@
                             <span class="playlist-type">PLAYLIST</span>
                             <h1 id="playlist-title">Nom de la playlist</h1>
                             <p id="playlist-description-text">Description</p>
-                            <span id="playlist-stats">0 morceaux</span>
+                            <span id="playlist-stats">0 morceau(x)</span>
                         </div>
                     </div>
                     <div id="playlist-songs" class="songs-grid"></div>
                 </div>
+
             </div>
         </main>
 
@@ -127,10 +160,10 @@
             </div>
             <div class="player-center">
                 <div class="player-controls">
-                    <button id="prev-btn" class="control-btn">⏮</button>
-                    <button id="play-btn" class="control-btn play-pause">▶</button>
-                    <button id="pause-btn" class="control-btn play-pause" style="display: none;">⏸</button>
-                    <button id="next-btn" class="control-btn">⏭</button>
+                    <button id="prev-btn"  class="control-btn">⏮</button>
+                    <button id="play-btn"  class="control-btn play-pause">▶</button>
+                    <button id="pause-btn" class="control-btn play-pause" style="display:none;">⏸</button>
+                    <button id="next-btn"  class="control-btn">⏭</button>
                 </div>
                 <div class="progress-container">
                     <span id="time-current">0:00</span>
@@ -146,6 +179,7 @@
             </div>
             <audio id="audio-element"></audio>
         </footer>
+
     </div>
     <script src="{{ url_for('static', filename='js/player.js') }}"></script>
 </body>

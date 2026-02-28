@@ -5,89 +5,121 @@ from pathlib import Path
 import mimetypes
 
 app = Flask(__name__)
-CORS(app)  # Pour éviter les problèmes de CORS
+CORS(app)
 
-# Configuration
 app.config['AUDIO_FOLDER'] = 'audio_files'
-app.config['UPLOAD_FOLDER'] = 'audio_files'  # On utilise le même dossier
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB max
+app.config['UPLOAD_FOLDER'] = 'audio_files'
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 MB max
 
-# Créer le dossier s'il n'existe pas
 os.makedirs(app.config['AUDIO_FOLDER'], exist_ok=True)
+
+ALLOWED_EXTENSIONS = {'.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac'}
+
+def get_mimetype(filename):
+    ext = Path(filename).suffix.lower()
+    mimetypes_map = {
+        '.mp3':  'audio/mpeg',
+        '.flac': 'audio/flac',
+        '.wav':  'audio/wav',
+        '.ogg':  'audio/ogg',
+        '.m4a':  'audio/mp4',
+        '.aac':  'audio/aac',
+    }
+    return mimetypes_map.get(ext, 'audio/mpeg')
 
 @app.route('/')
 def index():
-    """Page d'accueil"""
     return render_template('index.html')
 
 @app.route('/api/songs')
 def get_songs():
-    """Récupérer la liste des chansons"""
     songs = []
-    extensions = ['.mp3', '.flac', '.wav', '.ogg', '.m4a']
-    
     audio_folder = Path(app.config['AUDIO_FOLDER'])
-    print(f"\n📁 Scan du dossier: {audio_folder.absolute()}")
-    
+    print(f"\n📁 Scan: {audio_folder.absolute()}")
+
     if not audio_folder.exists():
-        print("❌ Le dossier audio_files n'existe pas!")
+        print("❌ Dossier audio_files introuvable!")
         return jsonify([])
-    
-    for file in audio_folder.iterdir():
-        if file.is_file():
-            print(f"🔍 Fichier trouvé: {file.name}")
-            if file.suffix.lower() in extensions:
-                # Nettoyer le chemin pour Windows
-                file_path = str(file).replace('\\', '/')
-                songs.append({
-                    'id': file_path,
-                    'title': file.stem,
-                    'artist': 'Inconnu',
-                    'album': 'Inconnu',
-                    'path': file_path,
-                    'duration': 0,
-                    'filename': file.name
-                })
-                print(f"✅ Ajouté: {file.name}")
-    
-    print(f"🎵 Total: {len(songs)} chansons\n")
+
+    for file in sorted(audio_folder.iterdir()):
+        if file.is_file() and file.suffix.lower() in ALLOWED_EXTENSIONS:
+            songs.append({
+                'id':       file.name,         # juste le nom du fichier
+                'title':    file.stem,
+                'artist':   'Inconnu',
+                'album':    'Inconnu',
+                'duration': 0,
+                'filename': file.name
+            })
+            print(f"✅ {file.name}")
+
+    print(f"🎵 Total: {len(songs)} chanson(s)\n")
     return jsonify(songs)
 
-@app.route('/api/play/<path:song_path>')
-def play_song(song_path):
-    """Jouer un fichier audio"""
+@app.route('/api/play/<filename>')
+def play_song(filename):
     try:
-        print(f"🎧 Lecture demandée: {song_path}")
-        # Nettoyer le chemin
-        song_path = song_path.replace('\\', '/')
-        
-        # Vérifier si le chemin est absolu
-        if os.path.isabs(song_path):
-            return send_file(song_path, mimetype='audio/mpeg')
-        else:
-            # Chercher dans le dossier audio_files
-            full_path = os.path.join(app.config['AUDIO_FOLDER'], os.path.basename(song_path))
-            return send_file(full_path, mimetype='audio/mpeg')
+        # On n'accepte que le nom de fichier, pas un chemin arbitraire (sécurité)
+        safe_name = Path(filename).name
+        full_path = Path(app.config['AUDIO_FOLDER']) / safe_name
+
+        if not full_path.exists():
+            print(f"❌ Fichier introuvable: {full_path}")
+            return jsonify({'error': 'Fichier introuvable'}), 404
+
+        mime = get_mimetype(safe_name)
+        print(f"🎧 Lecture: {safe_name} ({mime})")
+        return send_file(str(full_path), mimetype=mime, conditional=True)
+
     except Exception as e:
         print(f"❌ Erreur lecture: {e}")
-        return jsonify({'error': str(e)}), 404
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    """Upload de fichiers audio"""
-    if 'file' not in request.files:
-        return jsonify({'error': 'Aucun fichier'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'Nom de fichier vide'}), 400
-    
-    if file:
-        filename = file.filename
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        print(f"✅ Fichier uploadé: {filename}")
-        return jsonify({'success': True, 'filename': filename})
+    # Supporte plusieurs fichiers
+    files = request.files.getlist('file')
+
+    if not files or all(f.filename == '' for f in files):
+        return jsonify({'error': 'Aucun fichier reçu'}), 400
+
+    uploaded = []
+    errors   = []
+
+    for file in files:
+        if file.filename == '':
+            continue
+
+        ext = Path(file.filename).suffix.lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            errors.append(f"{file.filename} : format non supporté")
+            continue
+
+        # Sécuriser le nom
+        from werkzeug.utils import secure_filename
+        filename  = secure_filename(file.filename)
+        save_path = Path(app.config['UPLOAD_FOLDER']) / filename
+
+        # Éviter d'écraser un fichier existant
+        counter = 1
+        stem, suffix = Path(filename).stem, Path(filename).suffix
+        while save_path.exists():
+            save_path = Path(app.config['UPLOAD_FOLDER']) / f"{stem}_{counter}{suffix}"
+            counter += 1
+
+        file.save(str(save_path))
+        uploaded.append(save_path.name)
+        print(f"✅ Uploadé: {save_path.name}")
+
+    if errors and not uploaded:
+        return jsonify({'error': '; '.join(errors)}), 400
+
+    return jsonify({
+        'success':  True,
+        'uploaded': uploaded,
+        'errors':   errors,
+        'count':    len(uploaded)
+    })
 
 if __name__ == '__main__':
     print("🚀 Démarrage de PULSE...")
