@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PULSE — Panel Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --violet:       #7c3aed;
+            --violet-light: #a855f7;
+            --violet-dim:   #4c1d95;
+            --bg:           #070709;
+            --bg-2:         #0e0d12;
+            --bg-card:      #100f16;
+            --border:       rgba(124,58,237,0.2);
+            --text:         #f0eeff;
+            --text-muted:   #6b6880;
+            --text-dim:     #9d9ab0;
+            --green:        #10b981;
+            --red:          #ef4444;
+        }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 40px 32px;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo { font-size: 22px; font-weight: 800; letter-spacing: 3px; background: linear-gradient(135deg,#fff 30%,var(--violet-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .admin-badge { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.4); color: var(--violet-light); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+        .header-right { display: flex; gap: 12px; align-items: center; }
+        .btn-back, .btn-logout {
+            padding: 8px 16px; border-radius: 8px; font-family: 'Outfit',sans-serif;
+            font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border);
+        }
+        .btn-back   { background: transparent; color: var(--text-dim); }
+        .btn-back:hover { border-color: var(--violet); color: var(--text); }
+        .btn-logout { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+        .btn-logout:hover { background: rgba(239,68,68,0.2); }
+
+        /* ── STATS ── */
+        .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 16px; margin-bottom: 36px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+        .stat-value { font-size: 32px; font-weight: 800; color: var(--violet-light); font-family: 'JetBrains Mono',monospace; }
+        .stat-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+        /* ── UPLOAD ZONE ── */
+        .section { margin-bottom: 36px; }
+        .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 16px; }
+
+        .upload-zone {
+            background: var(--bg-card);
+            border: 2px dashed rgba(124,58,237,0.35);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--violet-light);
+            background: rgba(124,58,237,0.06);
+        }
+        .upload-icon { font-size: 40px; margin-bottom: 12px; }
+        .upload-text { color: var(--text-dim); font-size: 15px; margin-bottom: 8px; }
+        .upload-sub  { color: var(--text-muted); font-size: 12px; margin-bottom: 20px; }
+
+        #global-file { display: none; }
+
+        .btn-upload {
+            background: var(--violet); border: none; color: #fff;
+            padding: 11px 28px; border-radius: 10px; font-family: 'Outfit',sans-serif;
+            font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+        }
+        .btn-upload:hover    { background: var(--violet-light); transform: translateY(-1px); }
+        .btn-upload:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+
+        .selected-files { margin-top: 16px; color: var(--violet-light); font-size: 13px; font-weight: 600; }
+
+        /* ── PROGRESS ── */
+        .progress-bar-wrap { margin-top: 16px; display: none; }
+        .progress-bar-track { background: rgba(255,255,255,0.06); border-radius: 4px; height: 6px; overflow: hidden; }
+        .progress-bar-fill  { height: 100%; background: var(--violet); border-radius: 4px; width: 0%; transition: width 0.3s; }
+        .progress-label     { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+        /* ── SONGS LIST ── */
+        .songs-table { width: 100%; border-collapse: collapse; }
+        .songs-table th {
+            text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+        .songs-table td { padding: 12px 16px; border-bottom: 1px solid rgba(124,58,237,0.07); font-size: 14px; }
+        .songs-table tr:hover td { background: rgba(124,58,237,0.04); }
+        .songs-table .duration { font-family: 'JetBrains Mono',monospace; font-size: 12px; color: var(--violet-light); }
+
+        .btn-delete {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+            color: #fca5a5; padding: 5px 12px; border-radius: 6px;
+            font-family: 'Outfit',sans-serif; font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-delete:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5); }
+
+        .global-badge { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            padding: 10px 22px; border-radius: 30px; font-size: 13px; font-weight: 600;
+            z-index: 9999; animation: toastIn 3s ease forwards; pointer-events: none;
+            border: 1px solid transparent; white-space: nowrap;
+        }
+        .toast-success { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); color: #6ee7b7; }
+        .toast-error   { background: rgba(239,68,68,0.15);  border-color: rgba(239,68,68,0.4);  color: #fca5a5; }
+        @keyframes toastIn { 0%{opacity:0;transform:translateX(-50%) translateY(8px)} 12%{opacity:1;transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0} }
+
+        .empty { padding: 40px; text-align: center; color: var(--text-muted); font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div style="display:flex;align-items:center;gap:16px">
+            <div class="logo">PULSE</div>
+            <div class="admin-badge">⚙️ Panel Admin</div>
+        </div>
+        <div class="header-right">
+            <button class="btn-back"   onclick="window.location.href='/'">← Retour au site</button>
+            <button class="btn-logout" onclick="logout()">Déconnexion</button>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value" id="stat-songs">—</div>
+            <div class="stat-label">Musiques globales</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-users">—</div>
+            <div class="stat-label">Utilisateurs inscrits</div>
+        </div>
+    </div>
+
+    <!-- UPLOAD ZONE -->
+    <div class="section">
+        <div class="section-title">🎵 Ajouter des musiques globales</div>
+        <div class="upload-zone" id="drop-zone">
+            <div class="upload-icon">🎶</div>
+            <div class="upload-text">Glisse tes fichiers ici ou clique pour choisir</div>
+            <div class="upload-sub">MP3, FLAC, WAV, OGG, M4A, AAC — ces musiques seront visibles par tous les utilisateurs</div>
+            <input type="file" id="global-file" multiple accept=".mp3,.flac,.wav,.ogg,.m4a,.aac">
+            <button class="btn-upload" id="upload-btn" onclick="document.getElementById('global-file').click()">
+                Choisir des fichiers
+            </button>
+            <div class="selected-files" id="selected-label"></div>
+        </div>
+
+        <div class="progress-bar-wrap" id="progress-wrap">
+            <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
+            <div class="progress-label" id="progress-label">Import en cours…</div>
+        </div>
+    </div>
+
+    <!-- LISTE DES MUSIQUES GLOBALES -->
+    <div class="section">
+        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>📚 Bibliothèque globale</span>
+            <button onclick="loadSongs()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;">🔄 Rafraîchir</button>
+        </div>
+        <div id="songs-container">
+            <div class="empty">Chargement…</div>
+        </div>
+    </div>
+
+    <script>
+        // ── INIT ─────────────────────────────────────────
+        loadSongs();
+
+        // ── DRAG & DROP ──────────────────────────────────
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                document.getElementById('global-file').files = files;
+                updateSelectedLabel(files);
+                uploadFiles(files);
+            }
+        });
+
+        document.getElementById('global-file').addEventListener('change', function() {
+            updateSelectedLabel(this.files);
+            if (this.files.length) uploadFiles(this.files);
+        });
+
+        function updateSelectedLabel(files) {
+            const el = document.getElementById('selected-label');
+            el.textContent = files.length > 0 ? `${files.length} fichier(s) sélectionné(s)` : '';
+        }
+
+        // ── UPLOAD ───────────────────────────────────────
+        async function uploadFiles(files) {
+            const formData = new FormData();
+            for (const f of files) formData.append('file', f);
+
+            const btn       = document.getElementById('upload-btn');
+            const progWrap  = document.getElementById('progress-wrap');
+            const progFill  = document.getElementById('progress-fill');
+            const progLabel = document.getElementById('progress-label');
+
+            btn.disabled       = true;
+            btn.textContent    = 'Import en cours…';
+            progWrap.style.display = 'block';
+            progFill.style.width   = '10%';
+            progLabel.textContent  = 'Envoi des fichiers…';
+
+            try {
+                // Simulation de progression
+                let fakeProgress = 10;
+                const interval = setInterval(() => {
+                    fakeProgress = Math.min(fakeProgress + 8, 85);
+                    progFill.style.width = fakeProgress + '%';
+                }, 300);
+
+                const res  = await fetch('/api/admin/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                clearInterval(interval);
+
+                if (res.ok && data.success) {
+                    progFill.style.width  = '100%';
+                    progLabel.textContent = `✅ ${data.count} fichier(s) importé(s) !`;
+                    toast(`✅ ${data.count} musique(s) ajoutée(s) à la bibliothèque globale !`, 'success');
+                    document.getElementById('global-file').value = '';
+                    document.getElementById('selected-label').textContent = '';
+                    setTimeout(() => { progWrap.style.display = 'none'; progFill.style.width = '0%'; }, 2000);
+                    loadSongs();
+                } else {
+                    progLabel.textContent = '❌ Erreur';
+                    toast('❌ ' + (data.error || 'Erreur upload'), 'error');
+                }
+            } catch (err) {
+                toast('❌ Impossible de contacter le serveur', 'error');
+            } finally {
+                btn.disabled    = false;
+                btn.textContent = 'Choisir des fichiers';
+            }
+        }
+
+        // ── CHARGEMENT MUSIQUES ───────────────────────────
+        async function loadSongs() {
+            try {
+                const res   = await fetch('/api/admin/songs');
+                const songs = await res.json();
+                document.getElementById('stat-songs').textContent = songs.length;
+                renderSongs(songs);
+            } catch(e) { console.error(e); }
+        }
+
+        function renderSongs(songs) {
+            const container = document.getElementById('songs-container');
+            if (!songs.length) {
+                container.innerHTML = '<div class="empty">📭 Aucune musique globale — importez-en ci-dessus</div>';
+                return;
+            }
+            container.innerHTML = `
+                <table class="songs-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Titre</th>
+                            <th>Artiste</th>
+                            <th>Durée</th>
+                            <th>Statut</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${songs.map((s, i) => `
+                            <tr>
+                                <td style="color:var(--text-muted)">${i + 1}</td>
+                                <td><strong>${esc(s.title)}</strong></td>
+                                <td style="color:var(--text-dim)">${esc(s.artist)}</td>
+                                <td class="duration">${formatTime(s.duration)}</td>
+                                <td><span class="global-badge">🌍 Global</span></td>
+                                <td><button class="btn-delete" onclick="deleteSong(${s.id}, this)">Supprimer</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        async function deleteSong(id, btn) {
+            if (!confirm('Supprimer cette musique ? Elle sera retirée pour tous les utilisateurs.')) return;
+            btn.disabled    = true;
+            btn.textContent = '…';
+            try {
+                const res = await fetch(`/api/admin/songs/${id}`, { method: 'DELETE' });
+                if (res.ok) { toast('🗑️ Musique supprimée', 'success'); loadSongs(); }
+                else        { toast('❌ Erreur suppression', 'error'); btn.disabled = false; btn.textContent = 'Supprimer'; }
+            } catch { toast('❌ Erreur serveur', 'error'); }
+        }
+
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        // ── UTILS ─────────────────────────────────────────
+        function formatTime(s) {
+            if (!s) return '0:00';
+            return Math.floor(s/60) + ':' + Math.floor(s%60).toString().padStart(2,'0');
+        }
+
+        function esc(str) {
+            return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function toast(msg, type) {
+            const t = document.createElement('div');
+            t.className = 'toast toast-' + type;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3100);
+        }
+    </script>
+</body>
+</html>

@@ -1,13 +1,10 @@
 import os
-import json
 import hashlib
 import secrets
-from datetime import datetime
 from functools import wraps
 from flask import (Flask, render_template, request, jsonify,
-                   session, redirect, url_for, send_from_directory)
+                   session, redirect, send_from_directory)
 import sqlite3
-import mutagen
 from mutagen.mp3 import MP3
 from mutagen.flac import FLAC
 from mutagen.oggvorbis import OggVorbis
@@ -16,14 +13,21 @@ from mutagen.oggvorbis import OggVorbis
 #  CONFIG
 # ─────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)   # change en prod !
+app.secret_key = 'CHANGE_MOI_EN_PROD_' + secrets.token_hex(16)
 
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR  = os.path.join(BASE_DIR, 'static', 'uploads')
+UPLOAD_DIR  = os.path.join(BASE_DIR, 'static', 'uploads')   # musiques privées (users)
+GLOBAL_DIR  = os.path.join(BASE_DIR, 'static', 'global')    # musiques globales (admin/toi)
 DB_PATH     = os.path.join(BASE_DIR, 'pulse.db')
 ALLOWED_EXT = {'.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac'}
 
+# ──────────────────────────────────────────────────────────────────
+#  Mets ton email ici → ce compte sera automatiquement admin
+ADMIN_EMAIL = 'admin@pulse.com'
+# ──────────────────────────────────────────────────────────────────
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(GLOBAL_DIR, exist_ok=True)
 
 # ─────────────────────────────────────────
 #  BASE DE DONNÉES
@@ -42,18 +46,22 @@ def init_db():
                 username   TEXT    NOT NULL UNIQUE,
                 email      TEXT    NOT NULL UNIQUE,
                 password   TEXT    NOT NULL,
+                is_admin   INTEGER DEFAULT 0,
                 created_at TEXT    DEFAULT (datetime('now'))
             );
 
+            -- is_global=1 : visible par tous (uploadée par admin)
+            -- is_global=0 : visible uniquement par user_id
             CREATE TABLE IF NOT EXISTS songs (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                filename   TEXT    NOT NULL,
-                title      TEXT    NOT NULL,
-                artist     TEXT    DEFAULT 'Inconnu',
-                album      TEXT    DEFAULT '',
-                duration   REAL    DEFAULT 0,
-                uploaded_at TEXT   DEFAULT (datetime('now'))
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                filename    TEXT    NOT NULL,
+                title       TEXT    NOT NULL,
+                artist      TEXT    DEFAULT 'Inconnu',
+                album       TEXT    DEFAULT '',
+                duration    REAL    DEFAULT 0,
+                is_global   INTEGER DEFAULT 0,
+                uploaded_at TEXT    DEFAULT (datetime('now'))
             );
 
             CREATE TABLE IF NOT EXISTS playlists (
@@ -73,16 +81,16 @@ def init_db():
             );
 
             CREATE TABLE IF NOT EXISTS history (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                song_id    INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
-                played_at  TEXT    DEFAULT (datetime('now'))
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                song_id   INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+                played_at TEXT    DEFAULT (datetime('now'))
             );
 
             CREATE TABLE IF NOT EXISTS favorites (
-                user_id    INTEGER NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
-                song_id    INTEGER NOT NULL REFERENCES songs(id)  ON DELETE CASCADE,
-                added_at   TEXT    DEFAULT (datetime('now')),
+                user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                song_id   INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+                added_at  TEXT    DEFAULT (datetime('now')),
                 PRIMARY KEY (user_id, song_id)
             );
         """)
@@ -99,34 +107,41 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
-            return jsonify({'error': 'Non connecté', 'redirect': '/login'}), 401
+            return jsonify({'error': 'Non connecté'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('is_admin'):
+            return jsonify({'error': 'Accès admin requis'}), 403
         return f(*args, **kwargs)
     return decorated
 
 def get_audio_meta(filepath):
-    """Extrait titre, artiste, durée depuis les tags ID3/Vorbis."""
-    title  = os.path.splitext(os.path.basename(filepath))[0]
-    artist = 'Inconnu'
+    title    = os.path.splitext(os.path.basename(filepath))[0]
+    artist   = 'Inconnu'
     duration = 0
     try:
         ext = os.path.splitext(filepath)[1].lower()
         if ext == '.mp3':
-            audio = MP3(filepath)
+            audio    = MP3(filepath)
             duration = audio.info.length
-            tags = audio.tags
+            tags     = audio.tags
             if tags:
                 title  = str(tags.get('TIT2', title))
                 artist = str(tags.get('TPE1', artist))
         elif ext == '.flac':
-            audio = FLAC(filepath)
+            audio    = FLAC(filepath)
             duration = audio.info.length
-            title  = (audio.get('title')  or [title])[0]
-            artist = (audio.get('artist') or [artist])[0]
+            title    = (audio.get('title')  or [title])[0]
+            artist   = (audio.get('artist') or [artist])[0]
         elif ext == '.ogg':
-            audio = OggVorbis(filepath)
+            audio    = OggVorbis(filepath)
             duration = audio.info.length
-            title  = (audio.get('title')  or [title])[0]
-            artist = (audio.get('artist') or [artist])[0]
+            title    = (audio.get('title')  or [title])[0]
+            artist   = (audio.get('artist') or [artist])[0]
         else:
             import mutagen
             audio = mutagen.File(filepath)
@@ -160,12 +175,18 @@ def register_page():
         return redirect('/')
     return render_template('auth.html', mode='register')
 
+@app.route('/admin')
+def admin_page():
+    if not session.get('is_admin'):
+        return redirect('/')
+    return render_template('admin.html')
+
 # ─────────────────────────────────────────
 #  API AUTH
 # ─────────────────────────────────────────
 @app.route('/api/register', methods=['POST'])
 def api_register():
-    data = request.get_json()
+    data     = request.get_json()
     username = (data.get('username') or '').strip()
     email    = (data.get('email')    or '').strip().lower()
     password = (data.get('password') or '').strip()
@@ -175,15 +196,16 @@ def api_register():
     if len(password) < 6:
         return jsonify({'error': 'Mot de passe trop court (6 car. min)'}), 400
 
+    is_admin = 1 if email == ADMIN_EMAIL else 0
     try:
         with get_db() as db:
             db.execute(
-                "INSERT INTO users (username, email, password) VALUES (?,?,?)",
-                (username, email, hash_password(password))
+                "INSERT INTO users (username, email, password, is_admin) VALUES (?,?,?,?)",
+                (username, email, hash_password(password), is_admin)
             )
-        return jsonify({'success': True, 'message': 'Compte créé !'})
+        return jsonify({'success': True})
     except sqlite3.IntegrityError:
-        return jsonify({'error': 'Email ou nom d\'utilisateur déjà utilisé'}), 409
+        return jsonify({'error': "Email ou nom d'utilisateur déjà utilisé"}), 409
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
@@ -202,7 +224,8 @@ def api_login():
 
     session['user_id']  = user['id']
     session['username'] = user['username']
-    return jsonify({'success': True, 'username': user['username']})
+    session['is_admin'] = bool(user['is_admin'])
+    return jsonify({'success': True, 'username': user['username'], 'is_admin': bool(user['is_admin'])})
 
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
@@ -212,24 +235,32 @@ def api_logout():
 @app.route('/api/me')
 @login_required
 def api_me():
-    return jsonify({'user_id': session['user_id'], 'username': session['username']})
+    return jsonify({
+        'user_id':  session['user_id'],
+        'username': session['username'],
+        'is_admin': session.get('is_admin', False)
+    })
 
 # ─────────────────────────────────────────
-#  API SONGS
+#  API SONGS (utilisateur)
 # ─────────────────────────────────────────
 @app.route('/api/songs')
 @login_required
 def api_songs():
+    uid = session['user_id']
     with get_db() as db:
-        songs = db.execute(
-            "SELECT * FROM songs WHERE user_id=? ORDER BY uploaded_at DESC",
-            (session['user_id'],)
-        ).fetchall()
-        # Récupérer les favoris de l'utilisateur
+        # Musiques globales + musiques privées de cet user
+        songs = db.execute("""
+            SELECT * FROM songs
+            WHERE is_global = 1
+               OR (is_global = 0 AND user_id = ?)
+            ORDER BY is_global DESC, uploaded_at DESC
+        """, (uid,)).fetchall()
+
         favs = {row['song_id'] for row in db.execute(
-            "SELECT song_id FROM favorites WHERE user_id=?",
-            (session['user_id'],)
+            "SELECT song_id FROM favorites WHERE user_id=?", (uid,)
         ).fetchall()}
+
     result = []
     for s in songs:
         d = row_to_dict(s)
@@ -240,26 +271,24 @@ def api_songs():
 @app.route('/api/upload', methods=['POST'])
 @login_required
 def api_upload():
+    """Upload privé — musique visible uniquement par l'utilisateur."""
     files = request.files.getlist('file')
     if not files:
         return jsonify({'error': 'Aucun fichier reçu'}), 400
 
-    count = 0
-    errors = []
+    count, errors = 0, []
     for f in files:
         ext = os.path.splitext(f.filename)[1].lower()
         if ext not in ALLOWED_EXT:
             errors.append(f'{f.filename}: format non supporté')
             continue
-        # Nom unique pour éviter les collisions
-        unique_name = f"{session['user_id']}_{secrets.token_hex(6)}{ext}"
+        unique_name = f"user_{session['user_id']}_{secrets.token_hex(6)}{ext}"
         filepath    = os.path.join(UPLOAD_DIR, unique_name)
         f.save(filepath)
-
         title, artist, duration = get_audio_meta(filepath)
         with get_db() as db:
             db.execute(
-                "INSERT INTO songs (user_id, filename, title, artist, duration) VALUES (?,?,?,?,?)",
+                "INSERT INTO songs (user_id, filename, title, artist, duration, is_global) VALUES (?,?,?,?,?,0)",
                 (session['user_id'], unique_name, title, artist, duration)
             )
         count += 1
@@ -268,43 +297,107 @@ def api_upload():
         return jsonify({'error': errors[0] if errors else 'Échec upload'}), 400
     return jsonify({'success': True, 'count': count, 'errors': errors})
 
-@app.route('/api/play/<filename>')
-@login_required
-def api_play(filename):
-    # Vérifie que le fichier appartient bien à l'utilisateur
-    with get_db() as db:
-        song = db.execute(
-            "SELECT * FROM songs WHERE filename=? AND user_id=?",
-            (filename, session['user_id'])
-        ).fetchone()
-    if not song:
-        return jsonify({'error': 'Accès refusé'}), 403
-
-    # Enregistrer dans l'historique
-    with get_db() as db:
-        db.execute(
-            "INSERT INTO history (user_id, song_id) VALUES (?,?)",
-            (session['user_id'], song['id'])
-        )
-    return send_from_directory(UPLOAD_DIR, filename)
-
 @app.route('/api/songs/<int:song_id>', methods=['DELETE'])
 @login_required
 def api_delete_song(song_id):
+    """Supprime une musique privée de l'utilisateur."""
+    uid = session['user_id']
     with get_db() as db:
         song = db.execute(
-            "SELECT * FROM songs WHERE id=? AND user_id=?",
-            (song_id, session['user_id'])
+            "SELECT * FROM songs WHERE id=? AND user_id=? AND is_global=0",
+            (song_id, uid)
         ).fetchone()
         if not song:
-            return jsonify({'error': 'Introuvable'}), 404
-        # Supprimer le fichier physique
+            return jsonify({'error': 'Introuvable ou accès refusé'}), 404
         try:
             os.remove(os.path.join(UPLOAD_DIR, song['filename']))
         except FileNotFoundError:
             pass
         db.execute("DELETE FROM songs WHERE id=?", (song_id,))
     return jsonify({'success': True})
+
+# ─────────────────────────────────────────
+#  API ADMIN — musiques globales
+# ─────────────────────────────────────────
+@app.route('/api/admin/songs', methods=['GET'])
+@login_required
+@admin_required
+def api_admin_songs():
+    with get_db() as db:
+        songs = db.execute(
+            "SELECT * FROM songs WHERE is_global=1 ORDER BY artist, title"
+        ).fetchall()
+    return jsonify([row_to_dict(s) for s in songs])
+
+@app.route('/api/admin/upload', methods=['POST'])
+@login_required
+@admin_required
+def api_admin_upload():
+    """Upload global — musique visible par TOUS les utilisateurs."""
+    files = request.files.getlist('file')
+    if not files:
+        return jsonify({'error': 'Aucun fichier reçu'}), 400
+
+    count, errors = 0, []
+    for f in files:
+        ext = os.path.splitext(f.filename)[1].lower()
+        if ext not in ALLOWED_EXT:
+            errors.append(f'{f.filename}: format non supporté')
+            continue
+        unique_name = f"global_{secrets.token_hex(8)}{ext}"
+        filepath    = os.path.join(GLOBAL_DIR, unique_name)
+        f.save(filepath)
+        title, artist, duration = get_audio_meta(filepath)
+        with get_db() as db:
+            db.execute(
+                "INSERT INTO songs (user_id, filename, title, artist, duration, is_global) VALUES (?,?,?,?,?,1)",
+                (session['user_id'], unique_name, title, artist, duration)
+            )
+        count += 1
+
+    if count == 0:
+        return jsonify({'error': errors[0] if errors else 'Échec upload'}), 400
+    return jsonify({'success': True, 'count': count, 'errors': errors})
+
+@app.route('/api/admin/songs/<int:song_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def api_admin_delete_song(song_id):
+    with get_db() as db:
+        song = db.execute("SELECT * FROM songs WHERE id=? AND is_global=1", (song_id,)).fetchone()
+        if not song:
+            return jsonify({'error': 'Introuvable'}), 404
+        try:
+            os.remove(os.path.join(GLOBAL_DIR, song['filename']))
+        except FileNotFoundError:
+            pass
+        db.execute("DELETE FROM songs WHERE id=?", (song_id,))
+    return jsonify({'success': True})
+
+# ─────────────────────────────────────────
+#  LECTURE AUDIO
+# ─────────────────────────────────────────
+@app.route('/api/play/<path:filename>')
+@login_required
+def api_play(filename):
+    uid = session['user_id']
+    with get_db() as db:
+        song = db.execute("""
+            SELECT * FROM songs
+            WHERE filename=? AND (is_global=1 OR user_id=?)
+        """, (filename, uid)).fetchone()
+
+    if not song:
+        return jsonify({'error': 'Accès refusé'}), 403
+
+    with get_db() as db:
+        db.execute(
+            "INSERT INTO history (user_id, song_id) VALUES (?,?)",
+            (uid, song['id'])
+        )
+
+    directory = GLOBAL_DIR if song['is_global'] else UPLOAD_DIR
+    return send_from_directory(directory, filename)
 
 # ─────────────────────────────────────────
 #  API FAVORIS
@@ -314,8 +407,7 @@ def api_delete_song(song_id):
 def api_get_favorites():
     with get_db() as db:
         songs = db.execute("""
-            SELECT s.*, 1 as is_favorite
-            FROM songs s
+            SELECT s.*, 1 as is_favorite FROM songs s
             JOIN favorites f ON f.song_id = s.id
             WHERE f.user_id = ?
             ORDER BY f.added_at DESC
@@ -346,12 +438,10 @@ def api_toggle_favorite(song_id):
 def api_history():
     with get_db() as db:
         rows = db.execute("""
-            SELECT s.*, h.played_at
-            FROM history h
+            SELECT s.*, h.played_at FROM history h
             JOIN songs s ON s.id = h.song_id
             WHERE h.user_id = ?
-            ORDER BY h.played_at DESC
-            LIMIT 50
+            ORDER BY h.played_at DESC LIMIT 50
         """, (session['user_id'],)).fetchall()
     return jsonify([row_to_dict(r) for r in rows])
 
@@ -381,8 +471,7 @@ def api_create_playlist():
             "INSERT INTO playlists (user_id, name, description) VALUES (?,?,?)",
             (session['user_id'], name, desc)
         )
-        pl_id = cur.lastrowid
-        pl = db.execute("SELECT * FROM playlists WHERE id=?", (pl_id,)).fetchone()
+        pl = db.execute("SELECT * FROM playlists WHERE id=?", (cur.lastrowid,)).fetchone()
     return jsonify(row_to_dict(pl)), 201
 
 @app.route('/api/playlists/<int:pl_id>', methods=['DELETE'])
@@ -415,13 +504,11 @@ def api_playlist_songs(pl_id):
 def api_playlist_song(pl_id, song_id):
     uid = session['user_id']
     with get_db() as db:
-        # Vérifie que la playlist appartient à l'utilisateur
         pl = db.execute(
             "SELECT 1 FROM playlists WHERE id=? AND user_id=?", (pl_id, uid)
         ).fetchone()
         if not pl:
             return jsonify({'error': 'Accès refusé'}), 403
-
         if request.method == 'POST':
             existing = db.execute(
                 "SELECT 1 FROM playlist_songs WHERE playlist_id=? AND song_id=?",
