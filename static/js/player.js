@@ -18,6 +18,10 @@ class AudioPlayer {
             if (res.status === 401) { window.location.href = '/login'; return; }
             this.currentUser = await res.json();
             this.setText('username-display', this.currentUser.username);
+            if (this.currentUser.is_admin) {
+                const btn = document.getElementById('admin-btn');
+                if (btn) btn.style.display = 'flex';
+                }
             await this.loadSongs();
             await this.loadPlaylists();
             this.switchView('home');

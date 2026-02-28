@@ -39,10 +39,8 @@
             padding-bottom: 20px;
             border-bottom: 1px solid var(--border);
         }
-
         .logo { font-size: 22px; font-weight: 800; letter-spacing: 3px; background: linear-gradient(135deg,#fff 30%,var(--violet-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
         .admin-badge { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.4); color: var(--violet-light); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-
         .header-right { display: flex; gap: 12px; align-items: center; }
         .btn-back, .btn-logout {
             padding: 8px 16px; border-radius: 8px; font-family: 'Outfit',sans-serif;
@@ -53,33 +51,52 @@
         .btn-logout { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5; }
         .btn-logout:hover { background: rgba(239,68,68,0.2); }
 
+        /* ── TABS ── */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-muted);
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: -1px;
+        }
+        .tab-btn:hover { color: var(--text); }
+        .tab-btn.active { color: var(--violet-light); border-bottom-color: var(--violet-light); }
+
+        /* ── TAB CONTENT ── */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
         /* ── STATS ── */
-        .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 16px; margin-bottom: 36px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 16px; margin-bottom: 36px; }
         .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
         .stat-value { font-size: 32px; font-weight: 800; color: var(--violet-light); font-family: 'JetBrains Mono',monospace; }
         .stat-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
         /* ── UPLOAD ZONE ── */
         .section { margin-bottom: 36px; }
-        .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 16px; }
+        .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
 
         .upload-zone {
-            background: var(--bg-card);
-            border: 2px dashed rgba(124,58,237,0.35);
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-            transition: all 0.2s;
-            cursor: pointer;
+            background: var(--bg-card); border: 2px dashed rgba(124,58,237,0.35);
+            border-radius: 16px; padding: 40px; text-align: center; transition: all 0.2s; cursor: pointer;
         }
-        .upload-zone:hover, .upload-zone.dragover {
-            border-color: var(--violet-light);
-            background: rgba(124,58,237,0.06);
-        }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--violet-light); background: rgba(124,58,237,0.06); }
         .upload-icon { font-size: 40px; margin-bottom: 12px; }
         .upload-text { color: var(--text-dim); font-size: 15px; margin-bottom: 8px; }
         .upload-sub  { color: var(--text-muted); font-size: 12px; margin-bottom: 20px; }
-
         #global-file { display: none; }
 
         .btn-upload {
@@ -90,25 +107,62 @@
         }
         .btn-upload:hover    { background: var(--violet-light); transform: translateY(-1px); }
         .btn-upload:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
-
         .selected-files { margin-top: 16px; color: var(--violet-light); font-size: 13px; font-weight: 600; }
 
-        /* ── PROGRESS ── */
         .progress-bar-wrap { margin-top: 16px; display: none; }
         .progress-bar-track { background: rgba(255,255,255,0.06); border-radius: 4px; height: 6px; overflow: hidden; }
         .progress-bar-fill  { height: 100%; background: var(--violet); border-radius: 4px; width: 0%; transition: width 0.3s; }
         .progress-label     { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 
-        /* ── SONGS LIST ── */
+        /* ── TABLE ── */
         .songs-table { width: 100%; border-collapse: collapse; }
         .songs-table th {
             text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 700;
             text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted);
             border-bottom: 1px solid var(--border);
         }
-        .songs-table td { padding: 12px 16px; border-bottom: 1px solid rgba(124,58,237,0.07); font-size: 14px; }
+        .songs-table td { padding: 12px 16px; border-bottom: 1px solid rgba(124,58,237,0.07); font-size: 14px; vertical-align: middle; }
         .songs-table tr:hover td { background: rgba(124,58,237,0.04); }
         .songs-table .duration { font-family: 'JetBrains Mono',monospace; font-size: 12px; color: var(--violet-light); }
+        .songs-table .plays    { font-family: 'JetBrains Mono',monospace; font-size: 12px; color: var(--green); }
+
+        /* ── INLINE EDIT ── */
+        .editable-field {
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            padding: 4px 8px;
+            width: 100%;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .editable-field:hover { border-color: var(--border); background: rgba(124,58,237,0.05); }
+        .editable-field:focus { border-color: var(--violet); background: rgba(124,58,237,0.1); outline: none; cursor: text; }
+
+        /* ── DRAG HANDLE ── */
+        .drag-handle {
+            cursor: grab;
+            color: var(--text-muted);
+            font-size: 16px;
+            padding: 0 8px;
+            user-select: none;
+        }
+        .drag-handle:active { cursor: grabbing; }
+        .songs-table tr.dragging { opacity: 0.4; }
+        .songs-table tr.drag-over td { border-top: 2px solid var(--violet-light); }
+
+        /* ── BOUTONS ACTION ── */
+        .btn-save {
+            background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+            color: #6ee7b7; padding: 5px 12px; border-radius: 6px;
+            font-family: 'Outfit',sans-serif; font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; display: none;
+        }
+        .btn-save:hover { background: rgba(16,185,129,0.2); }
+        .btn-save.visible { display: inline-block; }
 
         .btn-delete {
             background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
@@ -118,7 +172,34 @@
         }
         .btn-delete:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5); }
 
+        .actions-cell { display: flex; gap: 6px; align-items: center; }
+
         .global-badge { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+
+        /* ── USERS TABLE ── */
+        .users-table { width: 100%; border-collapse: collapse; }
+        .users-table th {
+            text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+        .users-table td { padding: 12px 16px; border-bottom: 1px solid rgba(124,58,237,0.07); font-size: 14px; }
+        .users-table tr:hover td { background: rgba(124,58,237,0.04); }
+        .admin-tag { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.4); color: var(--violet-light); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .user-tag  { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+
+        /* ── TOP SONGS ── */
+        .top-song-row { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid rgba(124,58,237,0.07); }
+        .top-song-rank { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 800; color: rgba(124,58,237,0.4); min-width: 36px; }
+        .top-song-rank.gold   { color: #f59e0b; }
+        .top-song-rank.silver { color: #94a3b8; }
+        .top-song-rank.bronze { color: #b45309; }
+        .top-song-info { flex: 1; }
+        .top-song-title  { font-size: 14px; font-weight: 600; }
+        .top-song-artist { font-size: 12px; color: var(--text-muted); }
+        .top-song-bar-wrap { width: 160px; background: rgba(255,255,255,0.05); border-radius: 4px; height: 6px; overflow: hidden; }
+        .top-song-bar { height: 100%; background: linear-gradient(90deg, var(--violet), var(--violet-light)); border-radius: 4px; transition: width 0.6s ease; }
+        .top-song-plays { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); min-width: 60px; text-align: right; }
 
         /* ── TOAST ── */
         .toast {
@@ -132,6 +213,26 @@
         @keyframes toastIn { 0%{opacity:0;transform:translateX(-50%) translateY(8px)} 12%{opacity:1;transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0} }
 
         .empty { padding: 40px; text-align: center; color: var(--text-muted); font-size: 14px; }
+
+        /* ── MODAL CONFIRM ── */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9998; backdrop-filter: blur(4px); display: none;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 32px; max-width: 400px; width: 90%;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+        }
+        .modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+        .modal p  { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--text-dim); padding: 9px 20px; border-radius: 8px; font-family: 'Outfit',sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-cancel:hover { border-color: var(--violet); color: var(--text); }
+        .btn-confirm-delete { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; padding: 9px 20px; border-radius: 8px; font-family: 'Outfit',sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-confirm-delete:hover { background: rgba(239,68,68,0.25); }
     </style>
 </head>
 <body>
@@ -142,12 +243,12 @@
             <div class="admin-badge">⚙️ Panel Admin</div>
         </div>
         <div class="header-right">
-            <button class="btn-back"   onclick="window.location.href='/'">← Retour au site</button>
+            <button class="btn-back" onclick="window.location.href='/'">← Retour au site</button>
             <button class="btn-logout" onclick="logout()">Déconnexion</button>
         </div>
     </div>
 
-    <!-- STATS -->
+    <!-- STATS GLOBALES -->
     <div class="stats">
         <div class="stat-card">
             <div class="stat-value" id="stat-songs">—</div>
@@ -157,123 +258,145 @@
             <div class="stat-value" id="stat-users">—</div>
             <div class="stat-label">Utilisateurs inscrits</div>
         </div>
-    </div>
-
-    <!-- UPLOAD ZONE -->
-    <div class="section">
-        <div class="section-title">🎵 Ajouter des musiques globales</div>
-        <div class="upload-zone" id="drop-zone">
-            <div class="upload-icon">🎶</div>
-            <div class="upload-text">Glisse tes fichiers ici ou clique pour choisir</div>
-            <div class="upload-sub">MP3, FLAC, WAV, OGG, M4A, AAC — ces musiques seront visibles par tous les utilisateurs</div>
-            <input type="file" id="global-file" multiple accept=".mp3,.flac,.wav,.ogg,.m4a,.aac">
-            <button class="btn-upload" id="upload-btn" onclick="document.getElementById('global-file').click()">
-                Choisir des fichiers
-            </button>
-            <div class="selected-files" id="selected-label"></div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-plays">—</div>
+            <div class="stat-label">Écoutes totales</div>
         </div>
-
-        <div class="progress-bar-wrap" id="progress-wrap">
-            <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
-            <div class="progress-label" id="progress-label">Import en cours…</div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-top">—</div>
+            <div class="stat-label">Musique la + écoutée</div>
         </div>
     </div>
 
-    <!-- LISTE DES MUSIQUES GLOBALES -->
-    <div class="section">
-        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
-            <span>📚 Bibliothèque globale</span>
-            <button onclick="loadSongs()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;">🔄 Rafraîchir</button>
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('musiques')">🎵 Musiques</button>
+        <button class="tab-btn" onclick="switchTab('stats')">📊 Statistiques</button>
+        <button class="tab-btn" onclick="switchTab('utilisateurs')">👥 Utilisateurs</button>
+    </div>
+
+    <!-- ═══ ONGLET MUSIQUES ═══ -->
+    <div id="tab-musiques" class="tab-content active">
+
+        <!-- UPLOAD -->
+        <div class="section">
+            <div class="section-title">🎵 Ajouter des musiques globales</div>
+            <div class="upload-zone" id="drop-zone">
+                <div class="upload-icon">🎶</div>
+                <div class="upload-text">Glisse tes fichiers ici ou clique pour choisir</div>
+                <div class="upload-sub">MP3, FLAC, WAV, OGG, M4A, AAC — visibles par tous les utilisateurs</div>
+                <input type="file" id="global-file" multiple accept=".mp3,.flac,.wav,.ogg,.m4a,.aac">
+                <button class="btn-upload" id="upload-btn" onclick="document.getElementById('global-file').click()">Choisir des fichiers</button>
+                <div class="selected-files" id="selected-label"></div>
+            </div>
+            <div class="progress-bar-wrap" id="progress-wrap">
+                <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
+                <div class="progress-label" id="progress-label">Import en cours…</div>
+            </div>
         </div>
-        <div id="songs-container">
-            <div class="empty">Chargement…</div>
+
+        <!-- LISTE MUSIQUES -->
+        <div class="section">
+            <div class="section-title">
+                <span>📚 Bibliothèque globale <span style="color:var(--text-muted);font-weight:400;font-size:11px;margin-left:8px;">Clique sur un titre ou artiste pour le modifier • Glisse les lignes pour réordonner</span></span>
+                <button onclick="loadSongs()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;">🔄 Rafraîchir</button>
+            </div>
+            <div id="songs-container"><div class="empty">Chargement…</div></div>
+        </div>
+    </div>
+
+    <!-- ═══ ONGLET STATS ═══ -->
+    <div id="tab-stats" class="tab-content">
+        <div class="section">
+            <div class="section-title">🏆 Top musiques les plus écoutées</div>
+            <div id="top-songs-container"><div class="empty">Chargement…</div></div>
+        </div>
+    </div>
+
+    <!-- ═══ ONGLET UTILISATEURS ═══ -->
+    <div id="tab-utilisateurs" class="tab-content">
+        <div class="section">
+            <div class="section-title">
+                <span>👥 Utilisateurs inscrits</span>
+                <button onclick="loadUsers()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;">🔄 Rafraîchir</button>
+            </div>
+            <div id="users-container"><div class="empty">Chargement…</div></div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRMATION -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <h3 id="modal-title">Confirmer la suppression</h3>
+            <p id="modal-text">Cette action est irréversible.</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+                <button class="btn-confirm-delete" id="modal-confirm-btn">Supprimer</button>
+            </div>
         </div>
     </div>
 
     <script>
+        // ── ÉTAT ─────────────────────────────────────────
+        let allSongs = [];
+        let dragSrc  = null;
+
         // ── INIT ─────────────────────────────────────────
         loadSongs();
+        loadStats();
 
-        // ── DRAG & DROP ──────────────────────────────────
-        const dropZone = document.getElementById('drop-zone');
-        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', e => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length) {
-                document.getElementById('global-file').files = files;
-                updateSelectedLabel(files);
-                uploadFiles(files);
-            }
-        });
-
-        document.getElementById('global-file').addEventListener('change', function() {
-            updateSelectedLabel(this.files);
-            if (this.files.length) uploadFiles(this.files);
-        });
-
-        function updateSelectedLabel(files) {
-            const el = document.getElementById('selected-label');
-            el.textContent = files.length > 0 ? `${files.length} fichier(s) sélectionné(s)` : '';
+        // ── TABS ─────────────────────────────────────────
+        function switchTab(name) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + name).classList.add('active');
+            if (name === 'stats')        loadTopSongs();
+            if (name === 'utilisateurs') loadUsers();
         }
 
-        // ── UPLOAD ───────────────────────────────────────
-        async function uploadFiles(files) {
-            const formData = new FormData();
-            for (const f of files) formData.append('file', f);
-
-            const btn       = document.getElementById('upload-btn');
-            const progWrap  = document.getElementById('progress-wrap');
-            const progFill  = document.getElementById('progress-fill');
-            const progLabel = document.getElementById('progress-label');
-
-            btn.disabled       = true;
-            btn.textContent    = 'Import en cours…';
-            progWrap.style.display = 'block';
-            progFill.style.width   = '10%';
-            progLabel.textContent  = 'Envoi des fichiers…';
-
+        // ── STATS GLOBALES ───────────────────────────────
+        async function loadStats() {
             try {
-                // Simulation de progression
-                let fakeProgress = 10;
-                const interval = setInterval(() => {
-                    fakeProgress = Math.min(fakeProgress + 8, 85);
-                    progFill.style.width = fakeProgress + '%';
-                }, 300);
+                const data = await (await fetch('/api/admin/stats')).json();
+                document.getElementById('stat-songs').textContent = data.total_songs  ?? '—';
+                document.getElementById('stat-users').textContent = data.total_users  ?? '—';
+                document.getElementById('stat-plays').textContent = data.total_plays  ?? '—';
+                document.getElementById('stat-top').textContent   = data.top_song     ?? '—';
+            } catch(e) { console.error(e); }
+        }
 
-                const res  = await fetch('/api/admin/upload', { method: 'POST', body: formData });
-                const data = await res.json();
-                clearInterval(interval);
-
-                if (res.ok && data.success) {
-                    progFill.style.width  = '100%';
-                    progLabel.textContent = `✅ ${data.count} fichier(s) importé(s) !`;
-                    toast(`✅ ${data.count} musique(s) ajoutée(s) à la bibliothèque globale !`, 'success');
-                    document.getElementById('global-file').value = '';
-                    document.getElementById('selected-label').textContent = '';
-                    setTimeout(() => { progWrap.style.display = 'none'; progFill.style.width = '0%'; }, 2000);
-                    loadSongs();
-                } else {
-                    progLabel.textContent = '❌ Erreur';
-                    toast('❌ ' + (data.error || 'Erreur upload'), 'error');
-                }
-            } catch (err) {
-                toast('❌ Impossible de contacter le serveur', 'error');
-            } finally {
-                btn.disabled    = false;
-                btn.textContent = 'Choisir des fichiers';
-            }
+        // ── TOP SONGS ────────────────────────────────────
+        async function loadTopSongs() {
+            try {
+                const songs = await (await fetch('/api/admin/stats/top')).json();
+                const container = document.getElementById('top-songs-container');
+                if (!songs.length) { container.innerHTML = '<div class="empty">Aucune écoute enregistrée</div>'; return; }
+                const max = songs[0].plays || 1;
+                const rankColors = ['gold','silver','bronze'];
+                container.innerHTML = songs.map((s, i) => `
+                    <div class="top-song-row">
+                        <div class="top-song-rank ${rankColors[i] || ''}">${i + 1}</div>
+                        <div class="top-song-info">
+                            <div class="top-song-title">${esc(s.title)}</div>
+                            <div class="top-song-artist">${esc(s.artist)}</div>
+                        </div>
+                        <div class="top-song-bar-wrap">
+                            <div class="top-song-bar" style="width:${Math.round((s.plays/max)*100)}%"></div>
+                        </div>
+                        <div class="top-song-plays">${s.plays} écoute${s.plays > 1 ? 's' : ''}</div>
+                    </div>
+                `).join('');
+            } catch(e) { console.error(e); }
         }
 
         // ── CHARGEMENT MUSIQUES ───────────────────────────
         async function loadSongs() {
             try {
-                const res   = await fetch('/api/admin/songs');
-                const songs = await res.json();
-                document.getElementById('stat-songs').textContent = songs.length;
-                renderSongs(songs);
+                const res = await fetch('/api/admin/songs');
+                allSongs  = await res.json();
+                document.getElementById('stat-songs').textContent = allSongs.length;
+                renderSongs(allSongs);
             } catch(e) { console.error(e); }
         }
 
@@ -284,41 +407,247 @@
                 return;
             }
             container.innerHTML = `
-                <table class="songs-table">
+                <table class="songs-table" id="songs-table">
                     <thead>
                         <tr>
+                            <th style="width:32px"></th>
                             <th>#</th>
                             <th>Titre</th>
                             <th>Artiste</th>
                             <th>Durée</th>
                             <th>Statut</th>
-                            <th></th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="songs-tbody">
                         ${songs.map((s, i) => `
-                            <tr>
-                                <td style="color:var(--text-muted)">${i + 1}</td>
-                                <td><strong>${esc(s.title)}</strong></td>
-                                <td style="color:var(--text-dim)">${esc(s.artist)}</td>
+                            <tr draggable="true" data-id="${s.id}" data-pos="${i}">
+                                <td><span class="drag-handle" title="Réordonner">⠿</span></td>
+                                <td style="color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:12px;">${i + 1}</td>
+                                <td><input class="editable-field" data-id="${s.id}" data-field="title"  value="${esc(s.title)}"  onchange="markChanged(this)" /></td>
+                                <td><input class="editable-field" data-id="${s.id}" data-field="artist" value="${esc(s.artist)}" onchange="markChanged(this)" /></td>
                                 <td class="duration">${formatTime(s.duration)}</td>
                                 <td><span class="global-badge">🌍 Global</span></td>
-                                <td><button class="btn-delete" onclick="deleteSong(${s.id}, this)">Supprimer</button></td>
+                                <td>
+                                    <div class="actions-cell">
+                                        <button class="btn-save" id="save-${s.id}" onclick="saveSong(${s.id})">💾 Sauvegarder</button>
+                                        <button class="btn-delete" onclick="confirmDelete('song', ${s.id}, '${esc(s.title)}')">Supprimer</button>
+                                    </div>
+                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>`;
+            initDragAndDrop();
         }
 
-        async function deleteSong(id, btn) {
-            if (!confirm('Supprimer cette musique ? Elle sera retirée pour tous les utilisateurs.')) return;
-            btn.disabled    = true;
-            btn.textContent = '…';
+        // ── ÉDITION INLINE ───────────────────────────────
+        function markChanged(input) {
+            const id  = input.dataset.id;
+            const btn = document.getElementById('save-' + id);
+            if (btn) btn.classList.add('visible');
+        }
+
+        async function saveSong(id) {
+            const titleInput  = document.querySelector(`input[data-id="${id}"][data-field="title"]`);
+            const artistInput = document.querySelector(`input[data-id="${id}"][data-field="artist"]`);
+            if (!titleInput || !artistInput) return;
+
+            const title  = titleInput.value.trim();
+            const artist = artistInput.value.trim();
+            if (!title) return toast('❌ Le titre ne peut pas être vide', 'error');
+
             try {
-                const res = await fetch(`/api/admin/songs/${id}`, { method: 'DELETE' });
-                if (res.ok) { toast('🗑️ Musique supprimée', 'success'); loadSongs(); }
-                else        { toast('❌ Erreur suppression', 'error'); btn.disabled = false; btn.textContent = 'Supprimer'; }
+                const res  = await fetch(`/api/admin/songs/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, artist })
+                });
+                if (res.ok) {
+                    toast('✅ Modifié avec succès', 'success');
+                    const btn = document.getElementById('save-' + id);
+                    if (btn) btn.classList.remove('visible');
+                    const song = allSongs.find(s => s.id === id);
+                    if (song) { song.title = title; song.artist = artist; }
+                } else {
+                    toast('❌ Erreur lors de la modification', 'error');
+                }
             } catch { toast('❌ Erreur serveur', 'error'); }
+        }
+
+        // ── DRAG & DROP RÉORDONNANCEMENT ──────────────────
+        function initDragAndDrop() {
+            const tbody = document.getElementById('songs-tbody');
+            if (!tbody) return;
+            const rows = tbody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                row.addEventListener('dragstart', e => {
+                    dragSrc = row;
+                    row.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                row.addEventListener('dragend', () => {
+                    row.classList.remove('dragging');
+                    tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
+                    saveOrder();
+                });
+                row.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
+                    if (row !== dragSrc) row.classList.add('drag-over');
+                });
+                row.addEventListener('drop', e => {
+                    e.preventDefault();
+                    if (dragSrc && dragSrc !== row) {
+                        const rows = [...tbody.querySelectorAll('tr')];
+                        const srcIdx = rows.indexOf(dragSrc);
+                        const tgtIdx = rows.indexOf(row);
+                        if (srcIdx < tgtIdx) row.after(dragSrc);
+                        else row.before(dragSrc);
+                        updateRowNumbers();
+                    }
+                });
+            });
+        }
+
+        function updateRowNumbers() {
+            const rows = document.querySelectorAll('#songs-tbody tr');
+            rows.forEach((row, i) => {
+                const numCell = row.cells[1];
+                if (numCell) numCell.textContent = i + 1;
+            });
+        }
+
+        async function saveOrder() {
+            const rows = document.querySelectorAll('#songs-tbody tr');
+            const order = [...rows].map(r => parseInt(r.dataset.id));
+            try {
+                await fetch('/api/admin/songs/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order })
+                });
+                toast('✅ Ordre sauvegardé', 'success');
+            } catch { toast('❌ Erreur sauvegarde ordre', 'error'); }
+        }
+
+        // ── UTILISATEURS ─────────────────────────────────
+        async function loadUsers() {
+            try {
+                const users = await (await fetch('/api/admin/users')).json();
+                document.getElementById('stat-users').textContent = users.length;
+                const container = document.getElementById('users-container');
+                if (!users.length) { container.innerHTML = '<div class="empty">Aucun utilisateur</div>'; return; }
+                container.innerHTML = `
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nom d'utilisateur</th>
+                                <th>Email</th>
+                                <th>Rôle</th>
+                                <th>Inscrit le</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${users.map((u, i) => `
+                                <tr>
+                                    <td style="color:var(--text-muted)">${i + 1}</td>
+                                    <td><strong>${esc(u.username)}</strong></td>
+                                    <td style="color:var(--text-dim)">${esc(u.email)}</td>
+                                    <td><span class="${u.is_admin ? 'admin-tag' : 'user-tag'}">${u.is_admin ? '⚙️ Admin' : '👤 User'}</span></td>
+                                    <td style="color:var(--text-muted);font-size:12px;">${u.created_at?.split('T')[0] || u.created_at || '—'}</td>
+                                    <td>
+                                        ${u.is_admin ? '<span style="color:var(--text-muted);font-size:12px;">—</span>' :
+                                        `<button class="btn-delete" onclick="confirmDelete('user', ${u.id}, '${esc(u.username)}')">Supprimer</button>`}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch(e) { console.error(e); }
+        }
+
+        // ── MODAL CONFIRM ─────────────────────────────────
+        let pendingAction = null;
+
+        function confirmDelete(type, id, name) {
+            const overlay = document.getElementById('modal-overlay');
+            document.getElementById('modal-title').textContent = type === 'song' ? '🗑️ Supprimer la musique ?' : '🗑️ Supprimer l\'utilisateur ?';
+            document.getElementById('modal-text').textContent  = type === 'song'
+                ? `"${name}" sera retirée pour tous les utilisateurs. Cette action est irréversible.`
+                : `L'utilisateur "${name}" et toutes ses données seront supprimés. Cette action est irréversible.`;
+            pendingAction = { type, id };
+            overlay.classList.add('show');
+            document.getElementById('modal-confirm-btn').onclick = executeDelete;
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.remove('show');
+            pendingAction = null;
+        }
+
+        async function executeDelete() {
+            if (!pendingAction) return;
+            closeModal();
+            const { type, id } = pendingAction;
+            const url = type === 'song' ? `/api/admin/songs/${id}` : `/api/admin/users/${id}`;
+            try {
+                const res = await fetch(url, { method: 'DELETE' });
+                if (res.ok) {
+                    toast(type === 'song' ? '🗑️ Musique supprimée' : '🗑️ Utilisateur supprimé', 'success');
+                    type === 'song' ? loadSongs() : loadUsers();
+                    loadStats();
+                } else { toast('❌ Erreur suppression', 'error'); }
+            } catch { toast('❌ Erreur serveur', 'error'); }
+        }
+
+        // ── DRAG & DROP UPLOAD ────────────────────────────
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault(); dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) { document.getElementById('global-file').files = files; updateSelectedLabel(files); uploadFiles(files); }
+        });
+        document.getElementById('global-file').addEventListener('change', function() {
+            updateSelectedLabel(this.files);
+            if (this.files.length) uploadFiles(this.files);
+        });
+        function updateSelectedLabel(files) {
+            document.getElementById('selected-label').textContent = files.length > 0 ? `${files.length} fichier(s) sélectionné(s)` : '';
+        }
+
+        // ── UPLOAD ────────────────────────────────────────
+        async function uploadFiles(files) {
+            const formData = new FormData();
+            for (const f of files) formData.append('file', f);
+            const btn = document.getElementById('upload-btn');
+            const progWrap = document.getElementById('progress-wrap');
+            const progFill = document.getElementById('progress-fill');
+            const progLabel = document.getElementById('progress-label');
+            btn.disabled = true; btn.textContent = 'Import en cours…';
+            progWrap.style.display = 'block'; progFill.style.width = '10%';
+            progLabel.textContent = 'Envoi des fichiers…';
+            try {
+                let fp = 10;
+                const interval = setInterval(() => { fp = Math.min(fp + 8, 85); progFill.style.width = fp + '%'; }, 300);
+                const res  = await fetch('/api/admin/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                clearInterval(interval);
+                if (res.ok && data.success) {
+                    progFill.style.width = '100%'; progLabel.textContent = `✅ ${data.count} fichier(s) importé(s) !`;
+                    toast(`✅ ${data.count} musique(s) ajoutée(s) !`, 'success');
+                    document.getElementById('global-file').value = '';
+                    document.getElementById('selected-label').textContent = '';
+                    setTimeout(() => { progWrap.style.display = 'none'; progFill.style.width = '0%'; }, 2000);
+                    loadSongs(); loadStats();
+                } else { progLabel.textContent = '❌ Erreur'; toast('❌ ' + (data.error || 'Erreur upload'), 'error'); }
+            } catch { toast('❌ Impossible de contacter le serveur', 'error'); }
+            finally { btn.disabled = false; btn.textContent = 'Choisir des fichiers'; }
         }
 
         async function logout() {
@@ -327,15 +656,8 @@
         }
 
         // ── UTILS ─────────────────────────────────────────
-        function formatTime(s) {
-            if (!s) return '0:00';
-            return Math.floor(s/60) + ':' + Math.floor(s%60).toString().padStart(2,'0');
-        }
-
-        function esc(str) {
-            return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        }
-
+        function formatTime(s) { if (!s) return '0:00'; return Math.floor(s/60) + ':' + Math.floor(s%60).toString().padStart(2,'0'); }
+        function esc(str) { return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
         function toast(msg, type) {
             const t = document.createElement('div');
             t.className = 'toast toast-' + type;
@@ -343,6 +665,7 @@
             document.body.appendChild(t);
             setTimeout(() => t.remove(), 3100);
         }
+        document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
     </script>
 </body>
 </html>

@@ -46,7 +46,6 @@ body {
 }
 
 /* ===== LAYOUT ===== */
-/* ✅ FIX: Le container utilise margin-left sur main, pas de grid avec sidebar fixed */
 .container {
     display: block;
     height: 100vh;
@@ -176,8 +175,8 @@ body {
 /* ===== USER SECTION ===== */
 .user-section {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 8px;
     padding: 12px 4px;
     margin-bottom: 8px;
     border-top: 1px solid var(--border);
@@ -191,20 +190,58 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    padding-left: 4px;
 }
 
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ===== BOUTON ADMIN ===== */
+.admin-btn {
+    flex: 1;
+    padding: 7px 10px;
+    background: rgba(124, 58, 237, 0.15);
+    border: 1px solid rgba(124, 58, 237, 0.45);
+    border-radius: var(--radius-sm);
+    color: var(--violet-light);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    letter-spacing: 0.3px;
+}
+
+.admin-btn:hover {
+    background: rgba(124, 58, 237, 0.3);
+    border-color: var(--violet-light);
+    color: #fff;
+    box-shadow: 0 0 14px rgba(124, 58, 237, 0.35);
+    transform: translateY(-1px);
+}
+
+/* ===== LOGOUT BUTTON ===== */
 .logout-btn {
+    flex: 1;
     background: transparent;
     border: 1px solid rgba(239,68,68,0.3);
     color: #fca5a5;
-    padding: 5px 10px;
-    border-radius: 6px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
     font-family: 'Outfit', sans-serif;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
-    flex-shrink: 0;
 }
 
 .logout-btn:hover {
@@ -306,7 +343,6 @@ body {
 }
 
 /* ===== MAIN CONTENT ===== */
-/* ✅ FIX: margin-left = largeur sidebar, height = 100vh - hauteur player */
 .main-content {
     margin-left: var(--sidebar-w);
     height: calc(100vh - var(--player-h));
@@ -391,7 +427,6 @@ body {
 }
 
 /* ===== VIEWS ===== */
-/* ✅ FIX PRINCIPAL : on retire les !important qui causaient le conflit */
 .view {
     display: none;
 }

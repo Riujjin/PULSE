@@ -43,9 +43,13 @@
                 </div>
             </div>
 
+            <!-- USER SECTION avec bouton Admin (affiché via JS si admin) -->
             <div class="user-section">
                 <div id="username-display" class="username-display">...</div>
-                <button id="logout-btn" class="logout-btn">Déconnexion</button>
+                <div class="user-actions">
+                    <a href="/admin" id="admin-btn" class="admin-btn" style="display:none;">⚙️ Admin</a>
+                    <button id="logout-btn" class="logout-btn">Déconnexion</button>
+                </div>
             </div>
 
             <div class="upload-section">
@@ -97,7 +101,6 @@
                     </div>
                     <div id="songs-list" class="songs-grid"></div>
                 </div>
-
 
                 <!-- FAVORIS -->
                 <div id="favorites-view" class="view">

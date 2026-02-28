@@ -16,15 +16,13 @@ app = Flask(__name__)
 app.secret_key = 'CHANGE_MOI_EN_PROD_' + secrets.token_hex(16)
 
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR  = os.path.join(BASE_DIR, 'static', 'uploads')   # musiques privées (users)
-GLOBAL_DIR  = os.path.join(BASE_DIR, 'static', 'global')    # musiques globales (admin/toi)
+UPLOAD_DIR  = os.path.join(BASE_DIR, 'static', 'uploads')
+GLOBAL_DIR  = os.path.join(BASE_DIR, 'static', 'global')
 DB_PATH     = os.path.join(BASE_DIR, 'pulse.db')
 ALLOWED_EXT = {'.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac'}
 
-# ──────────────────────────────────────────────────────────────────
-#  Mets ton email ici → ce compte sera automatiquement admin
+# Mets ton email ici → ce compte sera automatiquement admin
 ADMIN_EMAIL = 'admin@pulse.com'
-# ──────────────────────────────────────────────────────────────────
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(GLOBAL_DIR, exist_ok=True)
@@ -50,8 +48,6 @@ def init_db():
                 created_at TEXT    DEFAULT (datetime('now'))
             );
 
-            -- is_global=1 : visible par tous (uploadée par admin)
-            -- is_global=0 : visible uniquement par user_id
             CREATE TABLE IF NOT EXISTS songs (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -61,6 +57,7 @@ def init_db():
                 album       TEXT    DEFAULT '',
                 duration    REAL    DEFAULT 0,
                 is_global   INTEGER DEFAULT 0,
+                position    INTEGER DEFAULT 0,
                 uploaded_at TEXT    DEFAULT (datetime('now'))
             );
 
@@ -96,6 +93,16 @@ def init_db():
         """)
 
 init_db()
+
+# Migration : ajout colonne position dans songs si absente (base existante)
+def migrate_db():
+    with get_db() as db:
+        cols = [r["name"] for r in db.execute("PRAGMA table_info(songs)").fetchall()]
+        if "position" not in cols:
+            db.execute("ALTER TABLE songs ADD COLUMN position INTEGER DEFAULT 0")
+            db.execute("UPDATE songs SET position = id WHERE is_global = 1")
+
+migrate_db()
 
 # ─────────────────────────────────────────
 #  HELPERS
@@ -249,12 +256,11 @@ def api_me():
 def api_songs():
     uid = session['user_id']
     with get_db() as db:
-        # Musiques globales + musiques privées de cet user
         songs = db.execute("""
             SELECT * FROM songs
             WHERE is_global = 1
                OR (is_global = 0 AND user_id = ?)
-            ORDER BY is_global DESC, uploaded_at DESC
+            ORDER BY is_global DESC, position ASC, uploaded_at DESC
         """, (uid,)).fetchall()
 
         favs = {row['song_id'] for row in db.execute(
@@ -271,7 +277,6 @@ def api_songs():
 @app.route('/api/upload', methods=['POST'])
 @login_required
 def api_upload():
-    """Upload privé — musique visible uniquement par l'utilisateur."""
     files = request.files.getlist('file')
     if not files:
         return jsonify({'error': 'Aucun fichier reçu'}), 400
@@ -300,7 +305,6 @@ def api_upload():
 @app.route('/api/songs/<int:song_id>', methods=['DELETE'])
 @login_required
 def api_delete_song(song_id):
-    """Supprime une musique privée de l'utilisateur."""
     uid = session['user_id']
     with get_db() as db:
         song = db.execute(
@@ -325,7 +329,7 @@ def api_delete_song(song_id):
 def api_admin_songs():
     with get_db() as db:
         songs = db.execute(
-            "SELECT * FROM songs WHERE is_global=1 ORDER BY artist, title"
+            "SELECT * FROM songs WHERE is_global=1 ORDER BY position ASC, uploaded_at ASC"
         ).fetchall()
     return jsonify([row_to_dict(s) for s in songs])
 
@@ -333,7 +337,6 @@ def api_admin_songs():
 @login_required
 @admin_required
 def api_admin_upload():
-    """Upload global — musique visible par TOUS les utilisateurs."""
     files = request.files.getlist('file')
     if not files:
         return jsonify({'error': 'Aucun fichier reçu'}), 400
@@ -372,6 +375,105 @@ def api_admin_delete_song(song_id):
         except FileNotFoundError:
             pass
         db.execute("DELETE FROM songs WHERE id=?", (song_id,))
+    return jsonify({'success': True})
+
+@app.route('/api/admin/songs/<int:song_id>', methods=['PATCH'])
+@login_required
+@admin_required
+def api_admin_edit_song(song_id):
+    """Modifier le titre et l'artiste d'une musique globale."""
+    data   = request.get_json()
+    title  = (data.get('title')  or '').strip()
+    artist = (data.get('artist') or '').strip()
+    if not title:
+        return jsonify({'error': 'Le titre est requis'}), 400
+    with get_db() as db:
+        song = db.execute("SELECT * FROM songs WHERE id=? AND is_global=1", (song_id,)).fetchone()
+        if not song:
+            return jsonify({'error': 'Introuvable'}), 404
+        db.execute("UPDATE songs SET title=?, artist=? WHERE id=?", (title, artist, song_id))
+    return jsonify({'success': True})
+
+@app.route('/api/admin/songs/reorder', methods=['POST'])
+@login_required
+@admin_required
+def api_admin_reorder_songs():
+    """Sauvegarder le nouvel ordre des musiques globales."""
+    data  = request.get_json()
+    order = data.get('order', [])
+    with get_db() as db:
+        for position, song_id in enumerate(order):
+            db.execute("UPDATE songs SET position=? WHERE id=? AND is_global=1", (position, song_id))
+    return jsonify({'success': True})
+
+@app.route('/api/admin/stats')
+@login_required
+@admin_required
+def api_admin_stats():
+    """Statistiques globales pour le panel admin."""
+    with get_db() as db:
+        total_songs = db.execute("SELECT COUNT(*) as c FROM songs WHERE is_global=1").fetchone()['c']
+        total_users = db.execute("SELECT COUNT(*) as c FROM users").fetchone()['c']
+        total_plays = db.execute("SELECT COUNT(*) as c FROM history").fetchone()['c']
+        top = db.execute("""
+            SELECT s.title FROM history h
+            JOIN songs s ON s.id = h.song_id
+            GROUP BY h.song_id ORDER BY COUNT(*) DESC LIMIT 1
+        """).fetchone()
+    return jsonify({
+        'total_songs': total_songs,
+        'total_users': total_users,
+        'total_plays': total_plays,
+        'top_song':    top['title'] if top else '—'
+    })
+
+@app.route('/api/admin/stats/top')
+@login_required
+@admin_required
+def api_admin_stats_top():
+    """Top 10 des musiques les plus écoutées."""
+    with get_db() as db:
+        rows = db.execute("""
+            SELECT s.id, s.title, s.artist, COUNT(h.id) as plays
+            FROM history h
+            JOIN songs s ON s.id = h.song_id
+            GROUP BY h.song_id
+            ORDER BY plays DESC
+            LIMIT 10
+        """).fetchall()
+    return jsonify([row_to_dict(r) for r in rows])
+
+@app.route('/api/admin/users')
+@login_required
+@admin_required
+def api_admin_users():
+    """Liste de tous les utilisateurs."""
+    with get_db() as db:
+        users = db.execute(
+            "SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at DESC"
+        ).fetchall()
+    return jsonify([row_to_dict(u) for u in users])
+
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def api_admin_delete_user(user_id):
+    """Supprimer un utilisateur (impossible de supprimer un admin)."""
+    if user_id == session['user_id']:
+        return jsonify({'error': 'Impossible de se supprimer soi-même'}), 400
+    with get_db() as db:
+        user = db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+        if not user:
+            return jsonify({'error': 'Introuvable'}), 404
+        if user['is_admin']:
+            return jsonify({'error': 'Impossible de supprimer un admin'}), 403
+        songs = db.execute("SELECT filename FROM songs WHERE user_id=? AND is_global=0", (user_id,)).fetchall()
+        for s in songs:
+            try:
+                os.remove(os.path.join(UPLOAD_DIR, s['filename']))
+            except FileNotFoundError:
+                pass
+        db.execute("DELETE FROM users WHERE id=?", (user_id,))
     return jsonify({'success': True})
 
 # ─────────────────────────────────────────
