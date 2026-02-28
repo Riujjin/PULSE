@@ -5,33 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PULSE - Lecteur Audio</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        /* Notifications toast */
-        .notify {
-            position: fixed;
-            bottom: 90px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px 24px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            z-index: 9999;
-            animation: fadeInOut 3s ease forwards;
-            pointer-events: none;
-        }
-        .notify-success { background: #1db954; color: #fff; }
-        .notify-error   { background: #e74c3c; color: #fff; }
-        .notify-info    { background: #3498db; color: #fff; }
-        @keyframes fadeInOut {
-            0%   { opacity: 0; transform: translateX(-50%) translateY(10px); }
-            15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
-            80%  { opacity: 1; }
-            100% { opacity: 0; }
-        }
-        /* Carte en cours de lecture */
-        .song-card.playing { border-left: 3px solid #1db954; }
-    </style>
 </head>
 <body>
     <div class="container">
@@ -52,6 +25,12 @@
                     <button class="nav-btn" data-view="library">
                         <span class="icon">📚</span> Bibliothèque
                     </button>
+                    <button class="nav-btn" data-view="favorites">
+                        <span class="icon">❤️</span> Favoris
+                    </button>
+                    <button class="nav-btn" data-view="history">
+                        <span class="icon">🕒</span> Historique
+                    </button>
                 </nav>
             </div>
 
@@ -64,13 +43,16 @@
                 </div>
             </div>
 
+            <div class="user-section">
+                <div id="username-display" class="username-display">...</div>
+                <button id="logout-btn" class="logout-btn">Déconnexion</button>
+            </div>
+
             <div class="upload-section">
                 <h3>AJOUTER</h3>
                 <form id="upload-form" enctype="multipart/form-data">
-                    <!-- multiple : permet de sélectionner plusieurs fichiers -->
                     <input type="file" id="audio-file" name="file"
                            accept=".mp3,.flac,.wav,.ogg,.m4a,.aac" multiple>
-                    <!-- id="upload-btn" nécessaire pour désactiver pendant l'upload -->
                     <button type="submit" id="upload-btn">Importer</button>
                 </form>
             </div>
@@ -116,6 +98,21 @@
                     <div id="songs-list" class="songs-grid"></div>
                 </div>
 
+
+                <!-- FAVORIS -->
+                <div id="favorites-view" class="view">
+                    <h1>Favoris</h1>
+                    <p class="subtitle">Vos morceaux préférés</p>
+                    <div id="favorites-songs" class="songs-grid"></div>
+                </div>
+
+                <!-- HISTORIQUE -->
+                <div id="history-view" class="view">
+                    <h1>Historique</h1>
+                    <p class="subtitle">Vos 50 dernières écoutes</p>
+                    <div id="history-songs" class="songs-grid"></div>
+                </div>
+
                 <!-- CRÉER PLAYLIST -->
                 <div id="create-playlist-view" class="view">
                     <h1>Créer une playlist</h1>
@@ -123,8 +120,7 @@
                         <div class="playlist-form">
                             <input type="text" id="playlist-name" placeholder="Nom de la playlist">
                             <textarea id="playlist-description" placeholder="Description (optionnel)"></textarea>
-                            <!-- onclick appelle player.createPlaylist() -->
-                            <button type="button" onclick="player.createPlaylist()">Créer</button>
+                            <button type="button" id="btn-create-playlist">Créer</button>
                         </div>
                     </div>
                     <h2>Ajouter des morceaux</h2>

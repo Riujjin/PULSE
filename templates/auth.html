@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PULSE — {% if mode == 'login' %}Connexion{% else %}Inscription{% endif %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --violet:       #7c3aed;
+            --violet-light: #a855f7;
+            --violet-dim:   #4c1d95;
+            --violet-glow:  rgba(124,58,237,0.35);
+            --bg:           #070709;
+            --bg-2:         #0e0d12;
+            --bg-card:      #100f16;
+            --border:       rgba(124,58,237,0.2);
+            --text:         #f0eeff;
+            --text-muted:   #6b6880;
+            --text-dim:     #9d9ab0;
+            --error:        #ef4444;
+            --success:      #10b981;
+        }
+
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Orbes d'ambiance */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -200px; left: -200px;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(124,58,237,0.15), transparent 65%);
+            pointer-events: none;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -200px; right: -200px;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(168,85,247,0.1), transparent 65%);
+            pointer-events: none;
+        }
+
+        /* ── CARD ── */
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 48px 44px;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,58,237,0.08);
+            animation: cardIn 0.4s cubic-bezier(0.4,0,0.2,1) both;
+        }
+
+        @keyframes cardIn {
+            from { opacity:0; transform: translateY(24px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+
+        /* Ligne lumineuse en haut */
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 15%; right: 15%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--violet), transparent);
+            border-radius: 1px;
+            opacity: 0.8;
+        }
+
+        /* ── LOGO ── */
+        .logo {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff 30%, var(--violet-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .auth-subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 36px;
+        }
+
+        /* ── TABS ── */
+        .tabs {
+            display: flex;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 32px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 9px;
+            text-align: center;
+            border-radius: 7px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .tab.active {
+            background: var(--violet);
+            color: #fff;
+            box-shadow: 0 2px 12px rgba(124,58,237,0.4);
+        }
+
+        /* ── FORM ── */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 7px;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        input::placeholder { color: var(--text-muted); }
+
+        input:focus {
+            border-color: var(--violet);
+            background: rgba(124,58,237,0.06);
+            box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+        }
+
+        input.error-field { border-color: var(--error); }
+
+        /* ── BOUTON SUBMIT ── */
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            margin-top: 8px;
+            background: var(--violet);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 24px rgba(124,58,237,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit:hover {
+            background: var(--violet-light);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 32px rgba(124,58,237,0.55);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        /* ── MESSAGES ── */
+        .msg {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .msg.show { display: block; }
+
+        .msg-error {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+            color: #fca5a5;
+        }
+
+        .msg-success {
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.3);
+            color: #6ee7b7;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo">PULSE</div>
+        <p class="auth-subtitle">L'audio du futur, aujourd'hui</p>
+
+        <div class="tabs">
+            <a href="/login"    class="tab {% if mode == 'login'    %}active{% endif %}">Connexion</a>
+            <a href="/register" class="tab {% if mode == 'register' %}active{% endif %}">Inscription</a>
+        </div>
+
+        <div id="msg-error"   class="msg msg-error"></div>
+        <div id="msg-success" class="msg msg-success"></div>
+
+        {% if mode == 'login' %}
+        <!-- ── LOGIN FORM ── -->
+        <form id="auth-form">
+            <div class="form-group">
+                <label>Adresse email</label>
+                <input type="email" id="email" placeholder="vous@exemple.com" required>
+            </div>
+            <div class="form-group">
+                <label>Mot de passe</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn-submit" id="submit-btn">Se connecter</button>
+        </form>
+
+        {% else %}
+        <!-- ── REGISTER FORM ── -->
+        <form id="auth-form">
+            <div class="form-group">
+                <label>Nom d'utilisateur</label>
+                <input type="text" id="username" placeholder="MonPseudo" required>
+            </div>
+            <div class="form-group">
+                <label>Adresse email</label>
+                <input type="email" id="email" placeholder="vous@exemple.com" required>
+            </div>
+            <div class="form-group">
+                <label>Mot de passe <span style="color:var(--text-muted);font-weight:400;">(6 car. min)</span></label>
+                <input type="password" id="password" placeholder="••••••••" required minlength="6">
+            </div>
+            <button type="submit" class="btn-submit" id="submit-btn">Créer mon compte</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <script>
+        const MODE = '{{ mode }}';
+
+        document.getElementById('auth-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const btn       = document.getElementById('submit-btn');
+            const errDiv    = document.getElementById('msg-error');
+            const okDiv     = document.getElementById('msg-success');
+            const email     = document.getElementById('email')?.value.trim();
+            const password  = document.getElementById('password')?.value;
+            const username  = document.getElementById('username')?.value.trim();
+
+            errDiv.className = 'msg msg-error';
+            okDiv.className  = 'msg msg-success';
+            btn.disabled     = true;
+            btn.textContent  = MODE === 'login' ? 'Connexion…' : 'Création…';
+
+            const endpoint = MODE === 'login' ? '/api/login' : '/api/register';
+            const payload  = MODE === 'login'
+                ? { email, password }
+                : { username, email, password };
+
+            try {
+                const res  = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    if (MODE === 'register') {
+                        okDiv.textContent = '✅ Compte créé ! Redirection…';
+                        okDiv.className   = 'msg msg-success show';
+                        setTimeout(() => window.location.href = '/login', 1500);
+                    } else {
+                        window.location.href = '/';
+                    }
+                } else {
+                    errDiv.textContent = '❌ ' + (data.error || 'Une erreur est survenue');
+                    errDiv.className   = 'msg msg-error show';
+                    btn.disabled       = false;
+                    btn.textContent    = MODE === 'login' ? 'Se connecter' : 'Créer mon compte';
+                }
+            } catch (err) {
+                errDiv.textContent = '❌ Impossible de contacter le serveur';
+                errDiv.className   = 'msg msg-error show';
+                btn.disabled       = false;
+                btn.textContent    = MODE === 'login' ? 'Se connecter' : 'Créer mon compte';
+            }
+        });
+    </script>
+</body>
+</html>
