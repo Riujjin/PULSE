@@ -591,8 +591,8 @@
 
         async function executeDelete() {
             if (!pendingAction) return;
-            closeModal();
             const { type, id } = pendingAction;
+            closeModal();
             const url = type === 'song' ? `/api/admin/songs/${id}` : `/api/admin/users/${id}`;
             try {
                 const res = await fetch(url, { method: 'DELETE' });

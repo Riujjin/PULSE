@@ -18,14 +18,16 @@ app.secret_key = 'CHANGE_MOI_EN_PROD_' + secrets.token_hex(16)
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR  = os.path.join(BASE_DIR, 'static', 'uploads')
 GLOBAL_DIR  = os.path.join(BASE_DIR, 'static', 'global')
+AVATAR_DIR  = os.path.join(BASE_DIR, 'static', 'avatars')
 DB_PATH     = os.path.join(BASE_DIR, 'pulse.db')
 ALLOWED_EXT = {'.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac'}
+ALLOWED_IMG = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 
-# Mets ton email ici → ce compte sera automatiquement admin
 ADMIN_EMAIL = 'admin@pulse.com'
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(GLOBAL_DIR, exist_ok=True)
+os.makedirs(AVATAR_DIR, exist_ok=True)
 
 # ─────────────────────────────────────────
 #  BASE DE DONNÉES
@@ -45,6 +47,8 @@ def init_db():
                 email      TEXT    NOT NULL UNIQUE,
                 password   TEXT    NOT NULL,
                 is_admin   INTEGER DEFAULT 0,
+                bio        TEXT    DEFAULT '',
+                avatar     TEXT    DEFAULT '',
                 created_at TEXT    DEFAULT (datetime('now'))
             );
 
@@ -94,13 +98,21 @@ def init_db():
 
 init_db()
 
-# Migration : ajout colonne position dans songs si absente (base existante)
+# ─────────────────────────────────────────
+#  MIGRATIONS
+# ─────────────────────────────────────────
 def migrate_db():
     with get_db() as db:
-        cols = [r["name"] for r in db.execute("PRAGMA table_info(songs)").fetchall()]
-        if "position" not in cols:
+        cols_songs = [r["name"] for r in db.execute("PRAGMA table_info(songs)").fetchall()]
+        if "position" not in cols_songs:
             db.execute("ALTER TABLE songs ADD COLUMN position INTEGER DEFAULT 0")
             db.execute("UPDATE songs SET position = id WHERE is_global = 1")
+
+        cols_users = [r["name"] for r in db.execute("PRAGMA table_info(users)").fetchall()]
+        if "bio" not in cols_users:
+            db.execute("ALTER TABLE users ADD COLUMN bio TEXT DEFAULT ''")
+        if "avatar" not in cols_users:
+            db.execute("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''")
 
 migrate_db()
 
@@ -249,6 +261,234 @@ def api_me():
     })
 
 # ─────────────────────────────────────────
+#  API PROFIL UTILISATEUR
+# ─────────────────────────────────────────
+@app.route('/api/profile', methods=['GET'])
+@login_required
+def api_get_profile():
+    """Retourne le profil complet + stats de l'utilisateur connecté."""
+    uid = session['user_id']
+    with get_db() as db:
+        user = db.execute(
+            "SELECT id, username, email, bio, avatar, created_at FROM users WHERE id=?", (uid,)
+        ).fetchone()
+
+        total_plays = db.execute(
+            "SELECT COUNT(*) as c FROM history WHERE user_id=?", (uid,)
+        ).fetchone()['c']
+
+        total_favs = db.execute(
+            "SELECT COUNT(*) as c FROM favorites WHERE user_id=?", (uid,)
+        ).fetchone()['c']
+
+        total_playlists = db.execute(
+            "SELECT COUNT(*) as c FROM playlists WHERE user_id=?", (uid,)
+        ).fetchone()['c']
+
+        top_artist = db.execute("""
+            SELECT s.artist, COUNT(*) as plays
+            FROM history h
+            JOIN songs s ON s.id = h.song_id
+            WHERE h.user_id = ?
+            GROUP BY s.artist
+            ORDER BY plays DESC
+            LIMIT 1
+        """, (uid,)).fetchone()
+
+        top_song = db.execute("""
+            SELECT s.title, s.artist, COUNT(*) as plays
+            FROM history h
+            JOIN songs s ON s.id = h.song_id
+            WHERE h.user_id = ?
+            GROUP BY h.song_id
+            ORDER BY plays DESC
+            LIMIT 1
+        """, (uid,)).fetchone()
+
+        total_time = db.execute("""
+            SELECT COALESCE(SUM(s.duration), 0) as total
+            FROM history h
+            JOIN songs s ON s.id = h.song_id
+            WHERE h.user_id = ?
+        """, (uid,)).fetchone()['total']
+
+    profile = row_to_dict(user)
+    profile['stats'] = {
+        'total_plays':     total_plays,
+        'total_favs':      total_favs,
+        'total_playlists': total_playlists,
+        'total_time':      int(total_time),
+        'top_artist':      top_artist['artist'] if top_artist else '—',
+        'top_song':        top_song['title']    if top_song   else '—',
+        'top_song_artist': top_song['artist']   if top_song   else '',
+    }
+    return jsonify(profile)
+
+@app.route('/api/profile', methods=['PATCH'])
+@login_required
+def api_update_profile():
+    """Modifier la bio de l'utilisateur."""
+    data = request.get_json()
+    bio  = (data.get('bio') or '').strip()[:300]
+    with get_db() as db:
+        db.execute("UPDATE users SET bio=? WHERE id=?", (bio, session['user_id']))
+    return jsonify({'success': True, 'bio': bio})
+
+@app.route('/api/profile/avatar', methods=['POST'])
+@login_required
+def api_upload_avatar():
+    """Upload d'un avatar pour l'utilisateur."""
+    if 'avatar' not in request.files:
+        return jsonify({'error': 'Aucun fichier reçu'}), 400
+    f   = request.files['avatar']
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in ALLOWED_IMG:
+        return jsonify({'error': 'Format non supporté (jpg, png, webp, gif)'}), 400
+    uid         = session['user_id']
+    avatar_name = f"avatar_{uid}_{secrets.token_hex(4)}{ext}"
+    filepath    = os.path.join(AVATAR_DIR, avatar_name)
+    with get_db() as db:
+        old = db.execute("SELECT avatar FROM users WHERE id=?", (uid,)).fetchone()
+        if old and old['avatar']:
+            try:
+                os.remove(os.path.join(AVATAR_DIR, old['avatar']))
+            except FileNotFoundError:
+                pass
+    f.save(filepath)
+    with get_db() as db:
+        db.execute("UPDATE users SET avatar=? WHERE id=?", (avatar_name, uid))
+    return jsonify({'success': True, 'avatar': avatar_name})
+
+@app.route('/api/avatar/<filename>')
+@login_required
+def api_get_avatar(filename):
+    return send_from_directory(AVATAR_DIR, filename)
+
+# ─────────────────────────────────────────
+#  API RECOMMANDATIONS
+# ─────────────────────────────────────────
+@app.route('/api/recommendations')
+@login_required
+def api_recommendations():
+    """
+    Algorithme de recommandation :
+    1. Artistes les plus écoutés → musiques non encore écoutées de ces artistes
+    2. Compléter avec les musiques globales les plus populaires jamais écoutées
+    3. Fallback : tendances globales si aucun historique
+    """
+    uid = session['user_id']
+    with get_db() as db:
+        top_artists = db.execute("""
+            SELECT s.artist, COUNT(*) as plays
+            FROM history h
+            JOIN songs s ON s.id = h.song_id
+            WHERE h.user_id = ?
+            GROUP BY s.artist
+            ORDER BY plays DESC
+            LIMIT 5
+        """, (uid,)).fetchall()
+
+        already_heard = {row['song_id'] for row in db.execute(
+            "SELECT DISTINCT song_id FROM history WHERE user_id=?", (uid,)
+        ).fetchall()}
+
+        recommendations = []
+
+        if top_artists:
+            artist_names = [a['artist'] for a in top_artists]
+            placeholders = ','.join('?' * len(artist_names))
+            by_artist = db.execute(f"""
+                SELECT * FROM songs
+                WHERE artist IN ({placeholders})
+                AND is_global = 1
+                ORDER BY RANDOM()
+                LIMIT 10
+            """, artist_names).fetchall()
+            for s in by_artist:
+                if s['id'] not in already_heard:
+                    d = row_to_dict(s)
+                    d['reason'] = f"Car tu écoutes {s['artist']}"
+                    recommendations.append(d)
+
+        popular = db.execute("""
+            SELECT s.*, COUNT(h.id) as play_count
+            FROM songs s
+            LEFT JOIN history h ON h.song_id = s.id
+            WHERE s.is_global = 1
+            GROUP BY s.id
+            ORDER BY play_count DESC
+            LIMIT 20
+        """).fetchall()
+
+        seen_ids = {r['id'] for r in recommendations}
+        for s in popular:
+            if s['id'] not in already_heard and s['id'] not in seen_ids:
+                d = row_to_dict(s)
+                d['reason'] = "Populaire sur PULSE"
+                recommendations.append(d)
+                seen_ids.add(s['id'])
+                if len(recommendations) >= 12:
+                    break
+
+        if not recommendations:
+            fallback = db.execute("""
+                SELECT s.*, COUNT(h.id) as play_count
+                FROM songs s
+                LEFT JOIN history h ON h.song_id = s.id
+                WHERE s.is_global = 1
+                GROUP BY s.id
+                ORDER BY play_count DESC
+                LIMIT 12
+            """).fetchall()
+            for s in fallback:
+                d = row_to_dict(s)
+                d['reason'] = "Tendance sur PULSE"
+                recommendations.append(d)
+
+    return jsonify(recommendations[:12])
+
+# ─────────────────────────────────────────
+#  API CLASSEMENT UTILISATEURS
+# ─────────────────────────────────────────
+@app.route('/api/leaderboard')
+@login_required
+def api_leaderboard():
+    """Classement des utilisateurs par écoutes totales + rang personnel."""
+    uid = session['user_id']
+    with get_db() as db:
+        top_users = db.execute("""
+            SELECT u.id, u.username, u.avatar,
+                   COUNT(h.id) as total_plays,
+                   COUNT(DISTINCT h.song_id) as unique_songs
+            FROM users u
+            LEFT JOIN history h ON h.user_id = u.id
+            GROUP BY u.id
+            ORDER BY total_plays DESC
+            LIMIT 10
+        """).fetchall()
+
+        user_rank = db.execute("""
+            SELECT COUNT(*) + 1 as rank FROM (
+                SELECT u.id, COUNT(h.id) as plays
+                FROM users u
+                LEFT JOIN history h ON h.user_id = u.id
+                GROUP BY u.id
+            ) WHERE plays > (
+                SELECT COUNT(*) FROM history WHERE user_id = ?
+            )
+        """, (uid,)).fetchone()
+
+        user_plays = db.execute(
+            "SELECT COUNT(*) as c FROM history WHERE user_id=?", (uid,)
+        ).fetchone()['c']
+
+    return jsonify({
+        'leaderboard': [row_to_dict(u) for u in top_users],
+        'my_rank':     user_rank['rank'] if user_rank else 1,
+        'my_plays':    user_plays
+    })
+
+# ─────────────────────────────────────────
 #  API SONGS (utilisateur)
 # ─────────────────────────────────────────
 @app.route('/api/songs')
@@ -262,11 +502,9 @@ def api_songs():
                OR (is_global = 0 AND user_id = ?)
             ORDER BY is_global DESC, position ASC, uploaded_at DESC
         """, (uid,)).fetchall()
-
         favs = {row['song_id'] for row in db.execute(
             "SELECT song_id FROM favorites WHERE user_id=?", (uid,)
         ).fetchall()}
-
     result = []
     for s in songs:
         d = row_to_dict(s)
@@ -280,7 +518,6 @@ def api_upload():
     files = request.files.getlist('file')
     if not files:
         return jsonify({'error': 'Aucun fichier reçu'}), 400
-
     count, errors = 0, []
     for f in files:
         ext = os.path.splitext(f.filename)[1].lower()
@@ -297,7 +534,6 @@ def api_upload():
                 (session['user_id'], unique_name, title, artist, duration)
             )
         count += 1
-
     if count == 0:
         return jsonify({'error': errors[0] if errors else 'Échec upload'}), 400
     return jsonify({'success': True, 'count': count, 'errors': errors})
@@ -321,7 +557,7 @@ def api_delete_song(song_id):
     return jsonify({'success': True})
 
 # ─────────────────────────────────────────
-#  API ADMIN — musiques globales
+#  API ADMIN
 # ─────────────────────────────────────────
 @app.route('/api/admin/songs', methods=['GET'])
 @login_required
@@ -340,7 +576,6 @@ def api_admin_upload():
     files = request.files.getlist('file')
     if not files:
         return jsonify({'error': 'Aucun fichier reçu'}), 400
-
     count, errors = 0, []
     for f in files:
         ext = os.path.splitext(f.filename)[1].lower()
@@ -357,7 +592,6 @@ def api_admin_upload():
                 (session['user_id'], unique_name, title, artist, duration)
             )
         count += 1
-
     if count == 0:
         return jsonify({'error': errors[0] if errors else 'Échec upload'}), 400
     return jsonify({'success': True, 'count': count, 'errors': errors})
@@ -381,7 +615,6 @@ def api_admin_delete_song(song_id):
 @login_required
 @admin_required
 def api_admin_edit_song(song_id):
-    """Modifier le titre et l'artiste d'une musique globale."""
     data   = request.get_json()
     title  = (data.get('title')  or '').strip()
     artist = (data.get('artist') or '').strip()
@@ -398,7 +631,6 @@ def api_admin_edit_song(song_id):
 @login_required
 @admin_required
 def api_admin_reorder_songs():
-    """Sauvegarder le nouvel ordre des musiques globales."""
     data  = request.get_json()
     order = data.get('order', [])
     with get_db() as db:
@@ -410,7 +642,6 @@ def api_admin_reorder_songs():
 @login_required
 @admin_required
 def api_admin_stats():
-    """Statistiques globales pour le panel admin."""
     with get_db() as db:
         total_songs = db.execute("SELECT COUNT(*) as c FROM songs WHERE is_global=1").fetchone()['c']
         total_users = db.execute("SELECT COUNT(*) as c FROM users").fetchone()['c']
@@ -431,7 +662,6 @@ def api_admin_stats():
 @login_required
 @admin_required
 def api_admin_stats_top():
-    """Top 10 des musiques les plus écoutées."""
     with get_db() as db:
         rows = db.execute("""
             SELECT s.id, s.title, s.artist, COUNT(h.id) as plays
@@ -447,7 +677,6 @@ def api_admin_stats_top():
 @login_required
 @admin_required
 def api_admin_users():
-    """Liste de tous les utilisateurs."""
     with get_db() as db:
         users = db.execute(
             "SELECT id, username, email, is_admin, created_at FROM users ORDER BY created_at DESC"
@@ -458,7 +687,6 @@ def api_admin_users():
 @login_required
 @admin_required
 def api_admin_delete_user(user_id):
-    """Supprimer un utilisateur (impossible de supprimer un admin)."""
     if user_id == session['user_id']:
         return jsonify({'error': 'Impossible de se supprimer soi-même'}), 400
     with get_db() as db:
@@ -488,16 +716,10 @@ def api_play(filename):
             SELECT * FROM songs
             WHERE filename=? AND (is_global=1 OR user_id=?)
         """, (filename, uid)).fetchone()
-
     if not song:
         return jsonify({'error': 'Accès refusé'}), 403
-
     with get_db() as db:
-        db.execute(
-            "INSERT INTO history (user_id, song_id) VALUES (?,?)",
-            (uid, song['id'])
-        )
-
+        db.execute("INSERT INTO history (user_id, song_id) VALUES (?,?)", (uid, song['id']))
     directory = GLOBAL_DIR if song['is_global'] else UPLOAD_DIR
     return send_from_directory(directory, filename)
 
