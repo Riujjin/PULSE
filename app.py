@@ -600,17 +600,33 @@ def api_admin_upload():
 @login_required
 @admin_required
 def api_admin_delete_song(song_id):
+    """
+    Suppression admin complete :
+    - Globales (is_global=1) ET musiques user (is_global=0)
+    - Cherche fichier dans GLOBAL_DIR puis UPLOAD_DIR
+    - Nettoie les fantomes (entrees DB sans fichier sur disque)
+    """
     with get_db() as db:
-        song = db.execute("SELECT * FROM songs WHERE id=? AND is_global=1", (song_id,)).fetchone()
+        song = db.execute("SELECT * FROM songs WHERE id=?", (song_id,)).fetchone()
         if not song:
-            return jsonify({'error': 'Introuvable'}), 404
-        try:
-            os.remove(os.path.join(GLOBAL_DIR, song['filename']))
-        except FileNotFoundError:
-            pass
-        db.execute("DELETE FROM songs WHERE id=?", (song_id,))
-    return jsonify({'success': True})
+            return jsonify({'error': 'Musique introuvable'}), 404
 
+        filename     = song['filename']
+        deleted_file = False
+        for directory in [GLOBAL_DIR, UPLOAD_DIR]:
+            filepath = os.path.join(directory, filename)
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                    deleted_file = True
+                except OSError as e:
+                    print(f'Erreur suppression fichier {filepath}: {e}')
+                break
+
+        # Supprime de la DB meme si le fichier est absent (nettoyage fantomes)
+        db.execute("DELETE FROM songs WHERE id=?", (song_id,))
+
+    return jsonify({'success': True, 'file_deleted': deleted_file})
 @app.route('/api/admin/songs/<int:song_id>', methods=['PATCH'])
 @login_required
 @admin_required
@@ -705,6 +721,26 @@ def api_admin_delete_user(user_id):
     return jsonify({'success': True})
 
 # ─────────────────────────────────────────
+@app.route('/api/admin/cleanup', methods=['POST'])
+@login_required
+@admin_required
+def api_admin_cleanup():
+    """
+    Nettoie toutes les entrees fantomes de la base de donnees :
+    musiques dont le fichier n'existe plus sur le disque.
+    Retourne le nombre d'entrees supprimees.
+    """
+    with get_db() as db:
+        all_songs = db.execute("SELECT id, filename, is_global FROM songs").fetchall()
+        removed = 0
+        for song in all_songs:
+            directory = GLOBAL_DIR if song['is_global'] else UPLOAD_DIR
+            filepath  = os.path.join(directory, song['filename'])
+            if not os.path.exists(filepath):
+                db.execute("DELETE FROM songs WHERE id=?", (song['id'],))
+                removed += 1
+    return jsonify({'success': True, 'removed': removed})
+
 #  LECTURE AUDIO
 # ─────────────────────────────────────────
 @app.route('/api/play/<path:filename>')
