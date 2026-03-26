@@ -90,6 +90,21 @@ class AudioPlayer {
         // Thème
         this.$('theme-toggle')?.addEventListener('click', () => this.toggleTheme());
 
+        // Rechargement automatique si des musiques sont supprimées depuis le panel admin
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible') {
+                await this.loadSongs();
+                this.refreshCurrentView();
+            }
+        });
+
+        window.addEventListener('storage', async (e) => {
+            if (e.key === 'pulse_songs_updated') {
+                await this.loadSongs();
+                this.refreshCurrentView();
+            }
+        });
+
         document.addEventListener('keydown', e => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             if (e.code === 'Space')           { e.preventDefault(); this.isPlaying ? this.pause() : this.play(); }
@@ -115,6 +130,24 @@ class AudioPlayer {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             this.playlist = await res.json();
         } catch (err) { this.notify('❌ Impossible de charger les chansons', 'error'); }
+    }
+
+    refreshCurrentView() {
+        // Retire la chanson en cours du lecteur si elle a été supprimée
+        if (this.currentIndex >= 0) {
+            const currentSong = this.playlist[this.currentIndex];
+            if (!currentSong) {
+                this.audio.pause();
+                this.audio.src = '';
+                this.currentIndex = -1;
+                this.isPlaying = false;
+                this.setText('track-title',  'Aucune piste');
+                this.setText('track-artist', '—');
+            }
+        }
+        // Rafraîchit la vue active pour supprimer les cartes fantômes
+        const activeView = document.querySelector('.view.active')?.id?.replace('view-', '');
+        if (activeView) this.switchView(activeView);
     }
 
     songCardHTML(song, showActions = true) {

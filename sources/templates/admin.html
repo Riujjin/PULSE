@@ -598,6 +598,8 @@
                 const res = await fetch(url, { method: 'DELETE' });
                 if (res.ok) {
                     toast(type === 'song' ? '🗑️ Musique supprimée' : '🗑️ Utilisateur supprimé', 'success');
+                    // Notifie le player principal dans les autres onglets
+                    localStorage.setItem('pulse_songs_updated', Date.now().toString());
                     type === 'song' ? loadSongs() : loadUsers();
                     loadStats();
                 } else { toast('❌ Erreur suppression', 'error'); }
