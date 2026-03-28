@@ -69,3 +69,6 @@ Cette section détaille les concepts du programme de NSI mobilisés dans PULSE :
 ```bash
 git clone https://github.com/votre-repo/pulse.git
 cd pulse
+
+2. **Afficher tout les modules a installer**
+```bash
